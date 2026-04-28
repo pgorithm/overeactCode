@@ -10,17 +10,59 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": [
-    "onCommand:overeactCode.openComposer"
-  ],
   "main": "./dist/extension.js",
   "contributes": {
     "commands": [
       {
         "command": "overeactCode.openComposer",
-        "title": "Overeact Code: Open Composer"
+        "title": "Overeact Code: Open"
+      },
+      {
+        "command": "overeactCode.configureProvider",
+        "title": "Overeact Code: Configure Provider"
+      },
+      {
+        "command": "overeactCode.configureProviderApiKey",
+        "title": "Overeact Code: Configure Provider API Key"
       }
-    ]
+    ],
+    "configuration": {
+      "title": "Overeact Code",
+      "properties": {
+        "overeactCode.provider.baseUrl": {
+          "type": "string",
+          "default": "https://api.openai.com/v1",
+          "description": "Base URL for the OpenAI-compatible provider."
+        },
+        "overeactCode.provider.displayName": {
+          "type": "string",
+          "default": "Default Provider",
+          "description": "Display name shown in provider-related UI."
+        },
+        "overeactCode.provider.defaultModel": {
+          "type": "string",
+          "default": "gpt-4o-mini",
+          "description": "Default model to use when routing is not configured."
+        }
+      }
+    },
+    "views": {
+      "explorer": [
+        {
+          "id": "overeactCode.composerView",
+          "name": "Overeact Code"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "overeactCode.openComposer",
+          "when": "view == overeactCode.composerView",
+          "group": "navigation"
+        }
+      ]
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",

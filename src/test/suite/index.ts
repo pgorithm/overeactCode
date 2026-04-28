@@ -9,6 +9,7 @@ export function run(): Promise<void> {
 
   const testsRoot = path.resolve(__dirname);
   mocha.addFile(path.resolve(testsRoot, "./extension.test.js"));
+  mocha.addFile(path.resolve(testsRoot, "./providerConfiguration.test.js"));
 
   return new Promise((resolve, reject) => {
     mocha.run((failures) => {
