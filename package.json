@@ -1,0 +1,38 @@
+{
+  "name": "overeact-code",
+  "displayName": "Overeact Code",
+  "description": "MVP side composer extension for Overeact Code.",
+  "version": "0.0.1",
+  "publisher": "overeact",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onCommand:overeactCode.openComposer"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "overeactCode.openComposer",
+        "title": "Overeact Code: Open Composer"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "test": "npm run compile && node ./dist/test/runTest.js"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^22.15.18",
+    "@types/vscode": "^1.90.0",
+    "@vscode/test-electron": "^2.4.1",
+    "mocha": "^10.8.2",
+    "typescript": "^5.8.3"
+  }
+}

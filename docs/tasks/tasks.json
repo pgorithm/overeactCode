@@ -34,7 +34,7 @@
         "Запустить npm test и убедиться, что базовый smoke test проходит."
       ],
       "dependencies": [],
-      "status": "pending",
+      "status": "done",
       "assignee": null,
       "claimed_at": null,
       "lease_until": null,
