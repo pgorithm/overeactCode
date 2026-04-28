@@ -8,13 +8,13 @@
     ],
     "during_work": [
       "Работай только над выбранной задачей",
-      "Перед стартом задачи переведи status в work in progress и выстави assignee, claimed_at, lease_until",
-      "После реализации переведи status в needs_review и добавь артефакты проверок"
+      "Оркестратор перед стартом задачи переводит status в work in progress и выставляет assignee, claimed_at, lease_until",
+      "Воркер не редактирует docs/tasks/tasks.json и docs/tasks/progress.md; после реализации возвращает structured handoff report с артефактами проверок"
     ],
     "before_finish": [
       "Запусти uv run ruff check . и task-focused тесты; full-suite pytest в parallel режиме подтверждает test-coordinator (или python -m ... fallback)",
       "Выполни ВСЕ test_steps из задачи",
-      "Меняй status на done только после подтверждения reviewer"
+      "Control-plane меняет status на needs_review/done только после worker handoff, test-coordinator verdict и reviewer approval"
     ]
   },
   "tasks": [
@@ -186,16 +186,16 @@
       "dependencies": [
         "TASK-004"
       ],
-      "status": "needs_review",
-      "assignee": "worker-task-005",
-      "claimed_at": "2026-04-28T18:25:04.3192871+03:00",
-      "lease_until": "2026-04-28T20:25:04.3192871+03:00",
+      "status": "done",
+      "assignee": null,
+      "claimed_at": null,
+      "lease_until": null,
       "review_required": true,
       "status_reason": null,
-      "test_verdict": null,
-      "test_owner": null,
-      "test_started_at": null,
-      "test_finished_at": null,
+      "test_verdict": "pass",
+      "test_owner": "test-coordinator",
+      "test_started_at": "2026-04-28T18:57:39.0000000+03:00",
+      "test_finished_at": "2026-04-28T18:57:55.1358711+03:00",
       "artifacts": [
         "compile: npm run compile -> pass",
         "targeted tests: npx mocha --ui tdd dist/test/suite/providerConfiguration.test.js -> pass (7 passing)",
@@ -204,7 +204,11 @@
         "test_step: model routing settings are readable/updatable without losing provider config (providerConfiguration.test: updates model routing without losing provider config).",
         "summary: implemented typed ModelAssignment task routing resolver/update/read helpers with provider-specific model names and default-model fallback behavior.",
         "handoff: awaiting test-coordinator full compile/full-suite/security verdict",
-        "commit: pending (recorded in worker handoff)"
+        "commit: 16cdb602d5adcfcd2bd96a9f8c9e355f76d9dea9",
+        "tc_strategy: serial lane (single shared extension-host test environment)",
+        "tc_commands: npm run compile; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; npm test",
+        "tc_result: pass (compile ok; full npm test ok, 19 passing, extension host exit code 0)",
+        "reviewer_note: approved; acceptance criteria validated with commit 16cdb602d5adcfcd2bd96a9f8c9e355f76d9dea9 and test_verdict=pass."
       ]
     },
     {
@@ -226,23 +230,28 @@
         "TASK-004",
         "TASK-005"
       ],
-      "status": "needs_review",
-      "assignee": "worker-task-006",
-      "claimed_at": "2026-04-28T18:59:22.4803123+03:00",
-      "lease_until": "2026-04-28T20:59:22.4803123+03:00",
+      "status": "done",
+      "assignee": null,
+      "claimed_at": null,
+      "lease_until": null,
       "review_required": true,
       "status_reason": null,
-      "test_verdict": null,
-      "test_owner": null,
-      "test_started_at": null,
-      "test_finished_at": null,
+      "test_verdict": "pass",
+      "test_owner": "test-coordinator",
+      "test_started_at": "2026-04-28T19:12:30.6122498+03:00",
+      "test_finished_at": "2026-04-28T19:12:50.4774890+03:00",
       "artifacts": [
         "compile: npm run compile -> pass",
         "targeted tests: npx mocha --ui tdd dist/test/suite/providerConfiguration.test.js --grep \"provider ready|chat/completions|unauthorized error|network error\" -> pass (4 passing)",
         "test_step: simulated 200 OK response and confirmed service returns provider ready.",
         "test_step: simulated 401 and network error responses and confirmed actionable error text with API key redacted.",
         "summary: implemented OpenAI-compatible provider connectivity client with configurable base URL, minimal chat/completions probe request, and redacted error handling for Bothub/OpenAI-style endpoints.",
-        "handoff: awaiting test coordinator full compile/full-suite/security regression and final test_verdict."
+        "commit: 4544dcc1731fa4a07b553b237dfd1ccc10d34842",
+        "handoff: awaiting test coordinator full compile/full-suite/security regression and final test_verdict.",
+        "tc_strategy: serial lane (single shared extension-host test environment)",
+        "tc_commands: npm run compile; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; npm test",
+        "tc_result: pass (compile ok; full npm test ok, 26 passing, extension host exit code 0)",
+        "reviewer_note: approved; acceptance criteria validated with commit 4544dcc1731fa4a07b553b237dfd1ccc10d34842 and test_verdict=pass."
       ]
     },
     {
@@ -264,16 +273,16 @@
         "TASK-002",
         "TASK-003"
       ],
-      "status": "needs_review",
-      "assignee": "worker-task-007",
-      "claimed_at": "2026-04-28T18:25:04.3192871+03:00",
-      "lease_until": "2026-04-28T20:25:04.3192871+03:00",
+      "status": "done",
+      "assignee": null,
+      "claimed_at": null,
+      "lease_until": null,
       "review_required": true,
       "status_reason": null,
-      "test_verdict": null,
-      "test_owner": null,
-      "test_started_at": null,
-      "test_finished_at": null,
+      "test_verdict": "pass",
+      "test_owner": "test-coordinator",
+      "test_started_at": "2026-04-28T18:57:39.0000000+03:00",
+      "test_finished_at": "2026-04-28T18:57:55.1358711+03:00",
       "artifacts": [
         "compile: npm run compile -> pass",
         "targeted tests: npx mocha --ui tdd dist/test/suite/toolCallRecord.test.js -> pass (3 passing)",
@@ -281,7 +290,11 @@
         "test_step (manual): open side composer in Extension Development Host and verify tool activity cards show structured fields (tool, status, permission, input/output summary) without raw verbose logs.",
         "summary: added ToolCallRecord model/store with status transitions and permission decisions, plus side composer tool activity rendering wired to structured records.",
         "handoff: awaiting test-coordinator full compile/full-suite/security verdict",
-        "commit: pending"
+        "commit: 32ba1b6c3f9eccf35380d710acc471edf10f8e91",
+        "tc_strategy: serial lane (single shared extension-host test environment)",
+        "tc_commands: npm run compile; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; npm test",
+        "tc_result: pass (compile ok; full npm test ok, 19 passing, extension host exit code 0)",
+        "reviewer_note: approved; acceptance criteria validated with commit 32ba1b6c3f9eccf35380d710acc471edf10f8e91 and test_verdict=pass."
       ]
     },
     {
@@ -378,17 +391,30 @@
         "TASK-007",
         "TASK-008"
       ],
-      "status": "pending",
+      "status": "done",
       "assignee": null,
       "claimed_at": null,
       "lease_until": null,
       "review_required": true,
       "status_reason": null,
-      "test_verdict": null,
-      "test_owner": null,
-      "test_started_at": null,
-      "test_finished_at": null,
-      "artifacts": []
+      "test_verdict": "pass",
+      "test_owner": "test-coordinator",
+      "test_started_at": "2026-04-28T19:12:30.6122498+03:00",
+      "test_finished_at": "2026-04-28T19:12:50.4774890+03:00",
+      "artifacts": [
+        "compile: npm run compile -> pass",
+        "targeted tests: npx mocha --ui tdd dist/test/suite/workspaceSearch.test.js -> pass (3 passing)",
+        "test_step: mocked workspace file search returns only matching files for glob and text query adapter paths (workspaceSearch.test).",
+        "test_step: symbol search uses workspace symbol provider adapter and returns metadata without repository-wide reads (workspaceSearch.test).",
+        "test_step: confirmed large unrelated files are not auto-read after search; results contain metadata only and read callback remains unused in tests.",
+        "summary: implemented retrieval-first workspace search tool with targeted file lookup (pattern/text query) and symbol lookup via VS Code workspace symbol provider, returning structured metadata for relevance selection.",
+        "handoff: awaiting test coordinator full compile/full-suite/security regression and final test_verdict.",
+        "commit: cd3a4cd981c5f49478160362dea213f7a87053ce",
+        "tc_strategy: serial lane (single shared extension-host test environment)",
+        "tc_commands: npm run compile; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; npm test",
+        "tc_result: pass (compile ok; full npm test ok, 26 passing, extension host exit code 0)",
+        "reviewer_note: approved; acceptance criteria validated with commit cd3a4cd981c5f49478160362dea213f7a87053ce and test_verdict=pass."
+      ]
     },
     {
       "id": "TASK-011",

@@ -8,13 +8,13 @@
     ],
     "during_work": [
       "Работай только над выбранной задачей",
-      "Перед стартом задачи переведи status в work in progress и выстави assignee, claimed_at, lease_until",
-      "После реализации переведи status в needs_review и добавь артефакты проверок"
+      "Оркестратор перед стартом задачи переводит status в work in progress и выставляет assignee, claimed_at, lease_until",
+      "Воркер не редактирует docs/tasks/tasks.json и docs/tasks/progress.md; после реализации возвращает structured handoff report с артефактами проверок"
     ],
     "before_finish": [
       "Запусти uv run ruff check . и task-focused тесты; full-suite pytest в parallel режиме подтверждает test-coordinator (или python -m ... fallback)",
       "Выполни ВСЕ test_steps из задачи",
-      "Меняй status на done только после подтверждения reviewer"
+      "Control-plane меняет status на needs_review/done только после worker handoff, test-coordinator verdict и reviewer approval"
     ]
   },
   "tasks": [

@@ -47,11 +47,12 @@ If claim fails due to concurrent update, re-read queue and choose another task.
 - After claiming **K** tasks, start **K separate worker sessions** in parallel (e.g. multiple **Task** invocations with `run_in_background=true`, one claimed task per Task). The dispatcher session must not silently serialize all implementation work when independent workers are available and the orchestrator policy allows K>1.
 - Run the post-claim sanity-check for each claimed task before launching any worker in the batch; if any claim is corrupt, fix queue state first and relaunch only after all claims are clean.
 - Each worker prompt must include task id, worker id (`assignee`), and pointers to `orchestrator-worker` + `RALPH-CURSOR.md` + `RALPH-CURSOR_ORCHESTRATOR.md`.
+- Each worker prompt must explicitly state that workers must not edit `docs/tasks/tasks.json` or `docs/tasks/progress.md`; they return a structured handoff report instead.
 - Full-suite test ownership stays with **Test Coordinator** per orchestrator policy; workers run narrow/smoke tests only.
 
 ## Lease and Recovery
 
-- If lease expires and no progress artifacts appear, reclaim task.
+- If lease expires and no worker handoff report appears, reclaim task.
 - Recovery action:
   - `status = "pending"` for transient failure, or `status = "blocked"` for real blocker.
   - clear `assignee`, `claimed_at`, `lease_until`
@@ -60,6 +61,7 @@ If claim fails due to concurrent update, re-read queue and choose another task.
 ## Boundaries
 
 - Dispatcher may modify only orchestration metadata and statuses.
+- Dispatcher is part of the single-writer control plane for `docs/tasks/tasks.json` and `docs/tasks/progress.md`; workers must not write those files.
 - Dispatcher must not mark `done` directly unless review is explicitly skipped by project rules.
 - Dispatcher must not alter task scope, acceptance criteria, or delete tasks.
 - Dispatcher must schedule test-coordinator pass before reviewer `done` decision in parallel mode.

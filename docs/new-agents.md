@@ -3,8 +3,8 @@
 ## Purpose
 
 This file is a quick orientation guide for AI agents: only non-obvious pitfalls
-that frequently break local runs, tests, Docker workflows, migrations, security
-checks, or bot flows.
+that frequently break local runs, builds, tests, migrations, security checks, agentic flows,
+etc.
 
 ## Rules
 

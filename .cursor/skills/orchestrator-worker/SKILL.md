@@ -1,13 +1,13 @@
 ---
 name: orchestrator-worker
-description: Executes one claimed RALPH task end-to-end under orchestrator control, implements acceptance criteria, runs quality gates, and prepares review artifacts. Use when a worker agent is assigned a task from docs/tasks/tasks.json.
+description: Executes one claimed RALPH task under orchestrator control, implements acceptance criteria, runs task-focused quality gates, and returns a handoff report without editing queue files. Use when a worker agent is assigned a task from docs/tasks/tasks.json.
 ---
 
 # Orchestrator Worker
 
 ## Role
 
-Worker executes exactly one assigned task from `docs/tasks/tasks.json` and prepares it for review.
+Worker executes exactly one assigned task from `docs/tasks/tasks.json` and prepares an isolated implementation handoff for review.
 
 ## Required Inputs
 
@@ -31,7 +31,7 @@ If any condition fails, stop and return control to dispatcher.
 - Work on one task only.
 - Implement all `acceptance_criteria`.
 - Do not modify unrelated code.
-- Keep task metadata consistent during execution.
+- Do not modify orchestration queue files: `docs/tasks/tasks.json` and `docs/tasks/progress.md` are single-writer files owned by the dispatcher/orchestrator control plane.
 
 ## Mandatory Quality Gate
 
@@ -53,23 +53,26 @@ Full-suite test run used for `done` decision is owned by `orchestrator-test-coor
 
 After successful implementation and checks:
 
-1. Set `status = "needs_review"`.
-2. Fill `artifacts` with:
+1. Do **not** edit `docs/tasks/tasks.json`.
+2. Do **not** edit `docs/tasks/progress.md`.
+3. Return a structured handoff report to the dispatcher/orchestrator with:
    - lint command and result
    - targeted test command(s) and result
    - `test_steps` outcomes (or explicit manual-needed note)
    - explicit handoff note: "awaiting test-coordinator full-suite verdict"
    - short change summary
-3. Keep `assignee`, `claimed_at`, `lease_until` until reviewer decision.
+   - changed files list
+   - whether a task-scoped commit was created, or whether the dispatcher/orchestrator must commit the prepared diff
 
 If gate fails:
 
-- set `status = "failed"` (or keep `work in progress` if retry is immediate)
-- write `status_reason`
-- append failure artifacts
+- do not edit queue metadata
+- return `status_reason` and failure artifacts in the handoff report
+- stop if retry would require changing unrelated files
 
 ## Boundaries
 
 - Worker must not set `done` when `review_required = true`.
 - Worker must not re-prioritize queue or reassign other tasks.
-- Worker must not edit/remove other task entries.
+- Worker must not edit `docs/tasks/tasks.json` at all.
+- Worker must not edit `docs/tasks/progress.md` at all.
