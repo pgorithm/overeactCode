@@ -103,7 +103,7 @@
         "TASK-001",
         "TASK-002"
       ],
-      "status": "work in progress",
+      "status": "needs_review",
       "assignee": "worker-task-004",
       "claimed_at": "2026-04-28T14:42:32.4038641Z",
       "lease_until": "2026-04-28T18:42:32.4038641Z",
@@ -113,7 +113,15 @@
       "test_owner": null,
       "test_started_at": null,
       "test_finished_at": null,
-      "artifacts": []
+      "artifacts": [
+        "compile: npm run compile -> pass",
+        "tests: npm test -> pass (5 passing: extension smoke + provider configuration/secret storage tests)",
+        "manual test_step: mock SecretStorage store confirms API key persisted only via secret adapter; settings updates cover baseUrl/displayName/defaultModel only",
+        "manual test_step: simulated SecretStorage store failure redacts API key in thrown message ([REDACTED])",
+        "summary: added provider settings contribution, secure API key command via SecretStorage, and error redaction utility for secret-safe diagnostics",
+        "commit: 2091efad3cb0694ca9b7310e38ba592ba6621dc6",
+        "handoff: full compile/full-suite/security regression and test_verdict are assigned to test coordinator"
+      ]
     },
     {
       "id": "TASK-004",
