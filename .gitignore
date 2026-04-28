@@ -32,6 +32,9 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
+# Husky runtime artifacts
+.husky/_/
+
 # Environment files
 .env
 .env.*

@@ -20,7 +20,7 @@ description: >-
 
 - **Не утверждать «взлом» без источника**: явная рекомендация вендора, CVE с указанием затронутых версий, публикация в OSV/GitHub Advisory/npm security.
 - Различать **прямые** и **транзитивные** зависимости; для фикса часто нужен bump прямой зависимости или pin/exclude с оценкой риска.
-- Соблюдать контекст проекта: читать [docs/new-agents.md](../../../docs/new-agents.md) (Build & Test, Security); на Windows при отсутствии `uv`/`python` в PATH использовать `py -m ...`.
+- Соблюдать контекст проекта: читать [docs/new-agents.md](../../../docs/new-agents.md) (Build & Test, Security); на Windows использовать `npm.cmd`/`py -m ...` при проблемах с PATH.
 
 ## Шаг 1 — Определить экосистемы
 
@@ -37,7 +37,15 @@ description: >-
 
 ## Шаг 2 — Сканирование известных уязвимостей
 
-**Python (этот репозиторий):** pre-commit уже настроен на аудит метаданных проекта:
+**Node.js (этот репозиторий):** сначала использовать lockfile-аудит в npm:
+
+```bash
+npm audit --omit=dev
+```
+
+При необходимости дополнительной проверки можно использовать OSV по `package-lock.json`.
+
+**Python (если присутствует в подпроектах):** pre-commit/`pip-audit` применим только для Python-манифестов:
 
 ```bash
 pre-commit run pip-audit --all-files
@@ -52,12 +60,7 @@ py -m pip_audit .
 
 Аргумент `.` важен: иначе pip-audit может сканировать окружение хука, а не проект (см. gotcha в [docs/new-agents.md](../../../docs/new-agents.md)).
 
-**Node (если есть lockfile):**
-
-```bash
-npm audit --omit=dev
-# или: pnpm audit
-```
+**Node (если есть lockfile в подпроектах):** использовать соответствующий менеджер пакетов (`npm audit --omit=dev`, `pnpm audit`, `yarn npm audit`).
 
 Фокус на **critical** / **high** и на цепочках с известным эксплойтом в advisory.
 

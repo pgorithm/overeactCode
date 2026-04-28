@@ -35,19 +35,19 @@ If any condition fails, stop and return control to dispatcher.
 
 ## Mandatory Quality Gate
 
-Run in repository root:
+Run in repository root using project scripts:
 
-1. `uv run ruff check .`
-2. Task-focused tests from `test_steps` or the narrowest safe subset relevant to changed paths.
+1. `npm run compile`
+2. Task-focused test commands from `test_steps` (typically `npm test` for this extension repo) or the narrowest safe subset relevant to changed paths.
 
-Fallback only if `uv` unavailable:
+Fallback only if npm is unavailable in PATH:
 
-1. `python -m ruff check .`
-2. `python -m pytest <targeted subset>`
+1. `npm.cmd run compile`
+2. `npm.cmd test` (or targeted subset command)
 
 Then execute all manual `test_steps` and record outcomes.
 
-Full-suite `pytest` used for `done` decision is owned by `orchestrator-test-coordinator` in parallel mode.
+Full-suite test run used for `done` decision is owned by `orchestrator-test-coordinator` in parallel mode.
 
 ## Transition to Review
 

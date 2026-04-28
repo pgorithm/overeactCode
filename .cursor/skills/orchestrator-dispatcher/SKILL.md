@@ -36,15 +36,18 @@ Before launching a worker:
    - `claimed_at = <ISO timestamp>`
    - `lease_until = <ISO timestamp>`
 4. Persist file.
-5. Only then start worker execution.
+5. Immediately run a sanity-check diff for `docs/tasks/tasks.json`: only the intended claimed `TASK-xxx` block may change.
+6. If unrelated task blocks changed, do **not** launch worker; restore foreign task blocks, record `status_reason` as `queue_corruption: <who/what changed>`, and re-run claim.
+7. Only then start worker execution.
 
 If claim fails due to concurrent update, re-read queue and choose another task.
 
 ## Parallel worker launch (K>1)
 
 - After claiming **K** tasks, start **K separate worker sessions** in parallel (e.g. multiple **Task** invocations with `run_in_background=true`, one claimed task per Task). The dispatcher session must not silently serialize all implementation work when independent workers are available and the orchestrator policy allows K>1.
+- Run the post-claim sanity-check for each claimed task before launching any worker in the batch; if any claim is corrupt, fix queue state first and relaunch only after all claims are clean.
 - Each worker prompt must include task id, worker id (`assignee`), and pointers to `orchestrator-worker` + `RALPH-CURSOR.md` + `RALPH-CURSOR_ORCHESTRATOR.md`.
-- Full-suite `pytest` ownership stays with **Test Coordinator** per orchestrator policy; workers run narrow/smoke tests only.
+- Full-suite test ownership stays with **Test Coordinator** per orchestrator policy; workers run narrow/smoke tests only.
 
 ## Lease and Recovery
 

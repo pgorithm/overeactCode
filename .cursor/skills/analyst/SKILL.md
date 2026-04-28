@@ -14,7 +14,7 @@ This skill is focused on **documentation correctness**, not generic architecture
 - Feature behavior docs linked to actual implementation.
 - Change notes and acceptance criteria for tasks.
 
-For architecture acceptance decisions, use `project-architect`.
+For architecture-wide decisions, use `project-wide-orchestrator`.
 
 ## Mandatory project context
 

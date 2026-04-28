@@ -1,6 +1,6 @@
 ---
 name: orchestrator-test-coordinator
-description: Owns queue-wide test execution for parallel RALPH workers, schedules serial/sharded pytest lanes safely, and publishes a single pass/fail verdict used by reviewer.
+description: Owns queue-wide test execution for parallel RALPH workers, schedules serial/sharded test lanes safely, and publishes a single pass/fail verdict used by reviewer.
 ---
 
 # Orchestrator Test Coordinator
@@ -27,7 +27,7 @@ Choose one strategy per run and record it in artifacts:
 
 1. **Serial lane (default/safest):**
    - Use when tests share one DB/Redis/runtime.
-   - Run one full `pytest` at a time.
+   - Run one full test suite command at a time (`npm test` in this repo).
 2. **Sharded lane (opt-in):**
    - Use only when shards are independent and quality is not reduced.
    - Define exact shard commands and merge results into one verdict.
@@ -36,15 +36,15 @@ If safety is unclear, fallback to serial lane.
 
 ## Mandatory Commands
 
-Primary:
+Primary (this repo):
 
-1. `uv run ruff check .`
-2. `uv run pytest` (serial) or shard commands that together cover the same required scope.
+1. `npm run compile`
+2. `npm test` (serial) or shard commands that together cover the same required scope.
 
-Fallback if `uv` unavailable:
+Fallback if npm is unavailable in PATH:
 
-1. `python -m ruff check .`
-2. `python -m pytest` (or shard equivalents).
+1. `npm.cmd run compile`
+2. `npm.cmd test` (or shard equivalents).
 
 ## Verdict Protocol
 

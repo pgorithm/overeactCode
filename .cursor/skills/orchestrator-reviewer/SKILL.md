@@ -22,9 +22,9 @@ Reviewer is the quality gatekeeper between `needs_review` and `done`.
 Approve only if all checks pass:
 
 1. `acceptance_criteria` are fully satisfied.
-2. Lint/test quality gate evidence is present and valid:
-   - `ruff check` success (coordinator evidence)
-   - full-suite `pytest` success (coordinator evidence)
+2. Build/test quality gate evidence is present and valid:
+   - `npm run compile` success (coordinator evidence)
+   - full-suite `npm test` success (coordinator evidence)
 3. `test_steps` results are documented with expected outcomes.
 4. `test_verdict = pass` from test coordinator.
 5. No obvious regression risk from changed paths.
@@ -65,6 +65,6 @@ Provide short, actionable findings:
 ```text
 TASK-XXX: rejected
 - Missing proof for AC-2
-- pytest output not attached in artifacts
+- full-suite test output not attached in artifacts
 Required: rerun tests, attach outputs, re-submit to needs_review
 ```

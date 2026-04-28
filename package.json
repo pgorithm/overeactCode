@@ -67,13 +67,15 @@
   "scripts": {
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
-    "test": "npm run compile && node ./dist/test/runTest.js"
+    "test": "npm run compile && node ./dist/test/runTest.js",
+    "prepare": "husky"
   },
   "devDependencies": {
     "@types/mocha": "^10.0.10",
     "@types/node": "^22.15.18",
     "@types/vscode": "^1.90.0",
     "@vscode/test-electron": "^2.4.1",
+    "husky": "^9.1.7",
     "mocha": "^10.8.2",
     "typescript": "^5.8.3"
   }
