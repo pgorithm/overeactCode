@@ -186,17 +186,26 @@
       "dependencies": [
         "TASK-004"
       ],
-      "status": "pending",
-      "assignee": null,
-      "claimed_at": null,
-      "lease_until": null,
+      "status": "needs_review",
+      "assignee": "worker-task-005",
+      "claimed_at": "2026-04-28T18:25:04.3192871+03:00",
+      "lease_until": "2026-04-28T20:25:04.3192871+03:00",
       "review_required": true,
       "status_reason": null,
       "test_verdict": null,
       "test_owner": null,
       "test_started_at": null,
       "test_finished_at": null,
-      "artifacts": []
+      "artifacts": [
+        "compile: npm run compile -> pass",
+        "targeted tests: npx mocha --ui tdd dist/test/suite/providerConfiguration.test.js -> pass (7 passing)",
+        "test_step: planning uses assigned model when assignment exists (providerConfiguration.test: uses assigned planning model when routing exists).",
+        "test_step: coding falls back to default model when assignment is missing (providerConfiguration.test: falls back to default model when assignment is missing).",
+        "test_step: model routing settings are readable/updatable without losing provider config (providerConfiguration.test: updates model routing without losing provider config).",
+        "summary: implemented typed ModelAssignment task routing resolver/update/read helpers with provider-specific model names and default-model fallback behavior.",
+        "handoff: awaiting test-coordinator full compile/full-suite/security verdict",
+        "commit: pending (recorded in worker handoff)"
+      ]
     },
     {
       "id": "TASK-006",

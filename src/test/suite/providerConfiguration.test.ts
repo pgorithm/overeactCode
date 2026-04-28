@@ -3,14 +3,17 @@ import {
   ProviderSecretStorageAdapter,
   type ProviderSettingsLike,
   redactSecrets,
-  saveProviderConfiguration
+  readProviderConfiguration,
+  resolveModelForTask,
+  saveProviderConfiguration,
+  updateModelRouting
 } from "../../providerConfiguration";
 
 suite("Provider configuration and secret storage", () => {
   test("saves provider settings without touching API key", async () => {
-    const updates: Record<string, string> = {};
+    const updates: Record<string, unknown> = {};
     const settings: ProviderSettingsLike = {
-      async update(section: string, value: string): Promise<void> {
+      async update(section: string, value: unknown): Promise<void> {
         updates[section] = value;
       },
       get<T>(_section: string): T | undefined {
@@ -89,5 +92,90 @@ suite("Provider configuration and secret storage", () => {
       redactSecrets(message, ["sk-abc"]),
       "token [REDACTED] leaked; [REDACTED] should not be visible"
     );
+  });
+
+  test("uses assigned planning model when routing exists", () => {
+    const settings: ProviderSettingsLike = {
+      async update(): Promise<void> {},
+      get<T>(section: string): T | undefined {
+        if (section === "defaultModel") {
+          return "gpt-4o-mini" as T;
+        }
+
+        if (section === "modelRouting") {
+          return {
+            planning: "gpt-4.1"
+          } as T;
+        }
+
+        return undefined;
+      }
+    };
+
+    assert.strictEqual(resolveModelForTask(settings, "planning"), "gpt-4.1");
+  });
+
+  test("falls back to default model when assignment is missing", () => {
+    const settings: ProviderSettingsLike = {
+      async update(): Promise<void> {},
+      get<T>(section: string): T | undefined {
+        if (section === "defaultModel") {
+          return "gpt-4o-mini" as T;
+        }
+
+        if (section === "modelRouting") {
+          return {
+            planning: "gpt-4.1"
+          } as T;
+        }
+
+        return undefined;
+      }
+    };
+
+    assert.strictEqual(resolveModelForTask(settings, "coding"), "gpt-4o-mini");
+  });
+
+  test("updates model routing without losing provider config", async () => {
+    const values: Record<string, unknown> = {
+      baseUrl: "https://api.example.com/v1",
+      displayName: "Example Provider",
+      defaultModel: "gpt-4o-mini",
+      modelRouting: {
+        planning: "gpt-4.1"
+      }
+    };
+    const settings: ProviderSettingsLike = {
+      async update(section: string, value: unknown): Promise<void> {
+        values[section] = value;
+      },
+      get<T>(section: string): T | undefined {
+        return values[section] as T | undefined;
+      }
+    };
+
+    const updatedRouting = await updateModelRouting(settings, {
+      review: "gpt-4.1-mini"
+    });
+
+    assert.deepStrictEqual(updatedRouting, {
+      planning: "gpt-4.1",
+      review: "gpt-4.1-mini"
+    });
+    assert.deepStrictEqual(values.modelRouting, {
+      planning: "gpt-4.1",
+      review: "gpt-4.1-mini"
+    });
+
+    const snapshot = readProviderConfiguration(settings);
+    assert.deepStrictEqual(snapshot, {
+      baseUrl: "https://api.example.com/v1",
+      displayName: "Example Provider",
+      defaultModel: "gpt-4o-mini",
+      modelRouting: {
+        planning: "gpt-4.1",
+        review: "gpt-4.1-mini"
+      }
+    });
   });
 });
