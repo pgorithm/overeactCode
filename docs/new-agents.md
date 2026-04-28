@@ -2,9 +2,7 @@
 
 ## Purpose
 
-This file is a quick orientation guide for AI agents: only non-obvious pitfalls
-that frequently break local runs, builds, tests, migrations, security checks, agentic flows,
-etc.
+This file is a quick orientation guide for AI agents: only non-obvious pitfalls that frequently break local runs, builds, tests, migrations, security checks, agentic flows, etc.
 
 ## Rules
 
@@ -14,5 +12,4 @@ etc.
 
 ## Known Gotchas
 
-- RALPH orchestration gotchas live in `.cursor/rules/ralph-orchestrator-loop.mdc`.
 - Agent-facing docs ownership: `AGENTS.md` bootstraps, `.cursor/rules/` holds always-on guardrails, `.cursor/skills/` holds role workflows, `docs/prompts/` holds user-run workflows, and `docs/tasks/tasks.template.json` is the queue schema canon.
