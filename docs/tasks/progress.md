@@ -45,3 +45,5 @@
 - Reviewer (batch TASK-018/TASK-023): задачи одобрены и переведены в `done` после проверки acceptance criteria, кода, lints и coordinator evidence; lease metadata очищены.
 - TASK-022 (solo): добавлен privacy hardening для `tool logs` и `final summary` через автоматическое редактирование секретов (`sk-*`, `Bearer`, `api_key=*`) и retrieval-first guard для targeted context перед provider call.
 - TASK-022 (solo): quality gate пройден (`npm run compile`, `npm test` — 70 passing), test_steps закрыты автотестами privacy/policy сценариев.
+- TASK-024 (solo): добавлен документированный dogfooding smoke scenario и local packaging check через Extension Development Host в `docs/dogfooding/smoke-scenario.md`.
+- TASK-024 (solo): quality gate пройден (`npm run compile`, `npm test` — 70 passing); manual smoke steps и unresolved MVP questions (API baseline, search depth, verification discovery, model routing UI, policy format) зафиксированы в dogfooding notes.
