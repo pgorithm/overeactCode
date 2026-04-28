@@ -35,6 +35,26 @@ export type AgentLoopPhase =
 
 export type PlanApprovalDecision = "accept" | "request_changes";
 
+export interface VerificationCommandFailure {
+  command: string;
+  stdout: string;
+  stderr: string;
+  exitCode: number | null;
+  durationMs: number;
+}
+
+export interface VerificationDiagnosticsFeedback {
+  preExistingCount: number;
+  likelyNewCount: number;
+  summary: string;
+}
+
+export interface VerificationFeedback {
+  failedCommands: VerificationCommandFailure[];
+  diagnostics: VerificationDiagnosticsFeedback;
+  retryGuidance: string;
+}
+
 export interface AgentLoopState {
   sessionId: string;
   status: AgentSessionStatus;
@@ -43,6 +63,8 @@ export interface AgentLoopState {
   planApproved: boolean;
   lastPlanDecision: PlanApprovalDecision | null;
   retryCount: number;
+  maxRetryLimit: number;
+  lastVerificationFeedback: VerificationFeedback | null;
   summary: string | null;
   phaseHistory: AgentLoopPhase[];
 }
@@ -96,7 +118,17 @@ export class AgentSessionStore {
 export class AgentLoopController {
   private readonly loopStateBySession = new Map<string, AgentLoopState>();
 
-  public begin(sessionId: string): AgentLoopState {
+  public begin(
+    sessionId: string,
+    options?: {
+      maxRetryLimit?: number;
+    }
+  ): AgentLoopState {
+    const maxRetryLimit = options?.maxRetryLimit ?? 2;
+    if (!Number.isInteger(maxRetryLimit) || maxRetryLimit < 1) {
+      throw new Error("maxRetryLimit must be an integer greater than or equal to 1.");
+    }
+
     const state: AgentLoopState = {
       sessionId,
       status: "planning",
@@ -105,6 +137,8 @@ export class AgentLoopController {
       planApproved: false,
       lastPlanDecision: null,
       retryCount: 0,
+      maxRetryLimit,
+      lastVerificationFeedback: null,
       summary: null,
       phaseHistory: ["task_understood"]
     };
@@ -194,6 +228,28 @@ export class AgentLoopController {
   public requestRetry(sessionId: string): AgentLoopState {
     const state = this.requireState(sessionId);
     state.retryCount += 1;
+    state.status = "planning";
+    state.planApproved = false;
+    state.lastPlanDecision = null;
+    state.phaseHistory.push("retry_requested");
+    return state;
+  }
+
+  public handleVerificationFailure(
+    sessionId: string,
+    feedback: VerificationFeedback,
+    terminalStatusOnLimit: "blocked" | "failed" = "blocked"
+  ): AgentLoopState {
+    const state = this.requireState(sessionId);
+    state.lastVerificationFeedback = feedback;
+    state.retryCount += 1;
+    const retriesExhausted = state.retryCount > state.maxRetryLimit;
+    if (retriesExhausted) {
+      state.status = terminalStatusOnLimit;
+      state.phaseHistory.push("verification_finished");
+      return state;
+    }
+
     state.status = "planning";
     state.planApproved = false;
     state.lastPlanDecision = null;

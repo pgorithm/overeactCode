@@ -33,3 +33,5 @@
 - Reviewer (batch TASK-015/TASK-017): задачи одобрены и переведены в `done` после проверки acceptance criteria и coordinator evidence; lease metadata очищены.
 - TASK-019: добавлен `terminal` executor с policy-gated запуском команд и структурированным результатом (`stdout`, `stderr`, `exitCode`, `durationMs`, `status/reason`), включая deny-path без старта процесса.
 - TASK-019: пройдены проверки `npm run compile`, `npm test` (54 passing) и целевые test_steps через `terminalTool.test` (success/fail/denied сценарии).
+- TASK-020: добавлен verification loop feedback в `AgentLoopController` (failed commands + diagnostics + retry guidance) с возвратом в planning для targeted retry.
+- TASK-020: реализован конфигурируемый retry limit; при исчерпании попыток сессия переводится в `blocked/failed`, проверки пройдены (`npm run compile`, `npm test` — 56 passing).

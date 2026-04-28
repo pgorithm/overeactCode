@@ -76,4 +76,89 @@ suite("Agent loop state machine", () => {
     const editingState = loop.beginEditing(sessionId);
     assert.strictEqual(editingState.status, "editing");
   });
+
+  test("captures verification feedback and returns to planning for targeted retry", () => {
+    const loop = new AgentLoopController();
+    const sessionId = "loop-4";
+
+    loop.begin(sessionId, { maxRetryLimit: 2 });
+    loop.markContextRetrieved(sessionId);
+    loop.proposePlan(sessionId, "Implement feature and verify.");
+    loop.decidePlan(sessionId, "accept");
+    loop.beginEditing(sessionId);
+    loop.finishEditing(sessionId);
+
+    const stateAfterFailure = loop.handleVerificationFailure(sessionId, {
+      failedCommands: [
+        {
+          command: "npm test",
+          stdout: "",
+          stderr: "1 failing",
+          exitCode: 1,
+          durationMs: 840
+        }
+      ],
+      diagnostics: {
+        preExistingCount: 2,
+        likelyNewCount: 1,
+        summary: "1 likely new TypeScript error introduced by recent changes."
+      },
+      retryGuidance: "Fix the new TS error and rerun tests before next retry."
+    });
+
+    assert.strictEqual(stateAfterFailure.status, "planning");
+    assert.strictEqual(stateAfterFailure.retryCount, 1);
+    assert.strictEqual(stateAfterFailure.planApproved, false);
+    assert.ok(stateAfterFailure.lastVerificationFeedback);
+    assert.strictEqual(
+      stateAfterFailure.lastVerificationFeedback?.failedCommands[0].command,
+      "npm test"
+    );
+    assert.strictEqual(
+      stateAfterFailure.lastVerificationFeedback?.diagnostics.likelyNewCount,
+      1
+    );
+    assert.strictEqual(
+      stateAfterFailure.lastVerificationFeedback?.retryGuidance,
+      "Fix the new TS error and rerun tests before next retry."
+    );
+  });
+
+  test("moves session to blocked when retry limit is exhausted", () => {
+    const loop = new AgentLoopController();
+    const sessionId = "loop-5";
+
+    loop.begin(sessionId, { maxRetryLimit: 1 });
+    loop.markContextRetrieved(sessionId);
+    loop.proposePlan(sessionId, "Apply risky refactor.");
+    loop.decidePlan(sessionId, "accept");
+    loop.beginEditing(sessionId);
+    loop.finishEditing(sessionId);
+
+    loop.handleVerificationFailure(sessionId, {
+      failedCommands: [],
+      diagnostics: {
+        preExistingCount: 0,
+        likelyNewCount: 1,
+        summary: "First retry requested."
+      },
+      retryGuidance: "Address diagnostics and retry."
+    });
+    const exhausted = loop.handleVerificationFailure(sessionId, {
+      failedCommands: [],
+      diagnostics: {
+        preExistingCount: 0,
+        likelyNewCount: 2,
+        summary: "Retry limit exceeded."
+      },
+      retryGuidance: "Escalate with unresolved blockers."
+    });
+
+    assert.strictEqual(exhausted.status, "blocked");
+    assert.strictEqual(exhausted.retryCount, 2);
+    assert.strictEqual(
+      exhausted.phaseHistory[exhausted.phaseHistory.length - 1],
+      "verification_finished"
+    );
+  });
 });
