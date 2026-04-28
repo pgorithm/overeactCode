@@ -73,3 +73,4 @@ And append artifacts:
 - Do not silently skip failing test groups.
 - Do not weaken test coverage to make green results.
 - Do not run destructive git operations.
+- Do not create standalone service commits in normal flow; keep coordinator metadata updates within the task commit policy (one commit per task), using separate commit only for explicit emergency recovery.

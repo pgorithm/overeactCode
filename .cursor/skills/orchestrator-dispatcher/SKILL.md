@@ -63,6 +63,8 @@ If claim fails due to concurrent update, re-read queue and choose another task.
 - Dispatcher must not mark `done` directly unless review is explicitly skipped by project rules.
 - Dispatcher must not alter task scope, acceptance criteria, or delete tasks.
 - Dispatcher must schedule test-coordinator pass before reviewer `done` decision in parallel mode.
+- Dispatcher should enforce "one commit per task" as the default queue policy and avoid standalone service commits unless there is an explicit аварийное исключение.
+- Dispatcher must finish each orchestration cycle with a clean `git status`; unresolved unstaged/staged leftovers are not allowed between cycles.
 
 ## Status Pipeline
 
