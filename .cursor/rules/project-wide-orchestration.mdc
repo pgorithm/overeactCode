@@ -1,8 +1,7 @@
 ---
 description: Включает orchestration-режим только для действительно глобальных задач по всему проекту
-alwaysApply: true
+alwaysApply: false
 ---
-
 # Project-Wide Orchestration Trigger
 
 Для задач, где нужен обзор почти всего репозитория (full code review, full security review, планирование полного пакета документации), сначала подключай skill `project-wide-orchestrator`.

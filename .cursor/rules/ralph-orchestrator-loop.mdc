@@ -1,8 +1,7 @@
 ---
 description: Enforces the non-stop RALPH queue orchestration loop
-alwaysApply: true
+alwaysApply: false
 ---
-
 # RALPH Orchestrator Loop
 
 When the user starts `docs/prompts/RALPH-CURSOR_ORCHESTRATOR.md` or asks to run/supervise `docs/tasks/tasks.json`, treat the current chat as the control-plane orchestrator.
