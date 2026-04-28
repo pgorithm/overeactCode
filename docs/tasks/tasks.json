@@ -64,23 +64,26 @@
       "dependencies": [
         "TASK-001"
       ],
-      "status": "needs_review",
-      "assignee": "worker-task-002",
-      "claimed_at": "2026-04-28T14:42:32.4038641Z",
-      "lease_until": "2026-04-28T18:42:32.4038641Z",
+      "status": "done",
+      "assignee": null,
+      "claimed_at": null,
+      "lease_until": null,
       "review_required": true,
       "status_reason": null,
-      "test_verdict": null,
-      "test_owner": null,
-      "test_started_at": null,
-      "test_finished_at": null,
+      "test_verdict": "pass",
+      "test_owner": "test-coordinator",
+      "test_started_at": "2026-04-28T14:51:38.000000Z",
+      "test_finished_at": "2026-04-28T14:51:58.273285Z",
       "artifacts": [
         "compile: npm run compile -> pass",
         "targeted tests: npm test -> pass (5 passing; includes Overeact Code smoke command registration and current shared suite)",
         "test_step: extension test host started successfully; command overeactCode.openComposer is registered and discoverable",
         "test_step (manual): verify side composer panel appears from Command Palette command Overeact Code: Open in Extension Development Host",
         "summary: side composer shell exposes task input, empty progress state, and explicit MVP note that inline edit mode is not included",
-        "handoff: awaiting test coordinator full compile/full-suite/security regression and test_verdict"
+        "handoff: awaiting test coordinator full compile/full-suite/security regression and test_verdict",
+        "tc_strategy: serial lane (single shared extension-host test environment)",
+        "tc_commands: npm.cmd run compile; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; npm.cmd test",
+        "tc_result: pass (compile ok; full npm test ok, 5 passing, extension host exit code 0)"
       ]
     },
     {
@@ -102,17 +105,23 @@
         "TASK-001",
         "TASK-002"
       ],
-      "status": "needs_review",
-      "assignee": "worker-task-004",
-      "claimed_at": "2026-04-28T14:42:32.4038641Z",
-      "lease_until": "2026-04-28T18:42:32.4038641Z",
+      "status": "pending",
+      "assignee": null,
+      "claimed_at": null,
+      "lease_until": null,
       "review_required": true,
-      "status_reason": null,
-      "test_verdict": null,
-      "test_owner": null,
-      "test_started_at": null,
-      "test_finished_at": null,
-      "artifacts": []
+      "status_reason": "queue_corruption: TASK-003 was unintentionally modified during TASK-004 worker run; reset to pending for clean re-claim.",
+      "test_verdict": "pass",
+      "test_owner": "test-coordinator",
+      "test_started_at": "2026-04-28T14:51:38.000000Z",
+      "test_finished_at": "2026-04-28T14:51:58.273285Z",
+      "artifacts": [
+        "tc_strategy: serial lane (single shared extension-host test environment)",
+        "tc_commands: npm.cmd run compile; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; npm.cmd test",
+        "tc_result: pass (compile ok; full npm test ok, 5 passing, extension host exit code 0)",
+        "tc_scope_note: full-suite result recorded at queue level for all current needs_review tasks in this batch",
+        "reviewer_note: rejected by reviewer — missing AgentSession model/types and lifecycle wiring (id, workspaceUri, userRequest, status, createdAt, updatedAt), no evidence of session creation from side composer, and no task-focused tests for required status transitions."
+      ]
     },
     {
       "id": "TASK-004",
@@ -132,16 +141,16 @@
       "dependencies": [
         "TASK-001"
       ],
-      "status": "needs_review",
-      "assignee": "worker-task-004",
-      "claimed_at": "2026-04-28T14:43:19.4412150Z",
-      "lease_until": "2026-04-28T18:43:19.4412150Z",
+      "status": "done",
+      "assignee": null,
+      "claimed_at": null,
+      "lease_until": null,
       "review_required": true,
       "status_reason": null,
-      "test_verdict": null,
-      "test_owner": null,
-      "test_started_at": null,
-      "test_finished_at": null,
+      "test_verdict": "pass",
+      "test_owner": "test-coordinator",
+      "test_started_at": "2026-04-28T14:51:38.000000Z",
+      "test_finished_at": "2026-04-28T14:51:58.273285Z",
       "artifacts": [
         "compile: npm run compile -> pass",
         "tests: npm test -> pass (5 passing: extension smoke + provider configuration/secret storage tests)",
@@ -149,7 +158,10 @@
         "manual test_step: simulated SecretStorage store failure redacts API key in thrown message ([REDACTED])",
         "summary: added provider settings contribution, secure API key command via SecretStorage, and error redaction utility for secret-safe diagnostics",
         "commit: 2091efad3cb0694ca9b7310e38ba592ba6621dc6",
-        "handoff: full compile/full-suite/security regression and test_verdict are assigned to test coordinator"
+        "handoff: full compile/full-suite/security regression and test_verdict are assigned to test coordinator",
+        "tc_strategy: serial lane (single shared extension-host test environment)",
+        "tc_commands: npm.cmd run compile; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; npm.cmd test",
+        "tc_result: pass (compile ok; full npm test ok, 5 passing, extension host exit code 0)"
       ]
     },
     {
