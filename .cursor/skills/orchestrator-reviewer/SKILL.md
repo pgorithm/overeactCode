@@ -57,7 +57,8 @@ Add reviewer note to `artifacts` with concrete gaps.
 - Reviewer does not re-scope tasks or rewrite acceptance criteria.
 - Reviewer does not approve tasks with failed/missing quality gate.
 - Reviewer does not delete tasks or alter unrelated queue entries.
-- Reviewer should not create standalone service commits in normal flow; reviewer metadata updates must follow the one-commit-per-task policy unless emergency recovery is explicitly required.
+- Commit ownership is control-plane only: worker/test-coordinator never commit.
+- Reviewer may create the final task commit (one commit per task) or delegate commit to orchestrator by explicit queue policy.
 
 ## Feedback Format
 

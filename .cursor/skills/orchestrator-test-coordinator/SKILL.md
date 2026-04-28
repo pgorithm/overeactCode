@@ -73,4 +73,5 @@ And append artifacts:
 - Do not silently skip failing test groups.
 - Do not weaken test coverage to make green results.
 - Do not run destructive git operations.
-- Do not create standalone service commits in normal flow; keep coordinator metadata updates within the task commit policy (one commit per task), using separate commit only for explicit emergency recovery.
+- Test Coordinator never creates task or service commits in normal orchestration flow.
+- Test Coordinator writes only test evidence (`artifacts`, `test_verdict`, timestamps) and returns control to reviewer/orchestrator for commit.

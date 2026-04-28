@@ -51,6 +51,7 @@
 4. **Git:** воркер **не делает коммит**. Подготовь изолированный diff только по своей задаче и передай его дальше по циклу (см. `RALPH-CURSOR_ORCHESTRATOR.md`, политика коммитов).
 5. **Не** переводи в `done` при `review_required: true`: верни structured handoff report (команды узкого прогона, вывод, итог ручных шагов, явная пометка, что полный прогон и security ждут Test Coordinator, краткое резюме изменений, список changed files).
 6. Перевод в `needs_review`, запись `artifacts`, обновление `progress.md` и коммит задачи выполняет только Reviewer или Orchestrator после проверки; дальнейшие `test_verdict`, полный `npm test`, решение reviewer — по `RALPH-CURSOR_ORCHESTRATOR.md`.
+7. В оркестраторном цикле worker и Test Coordinator коммиты не делают; финальный task-коммит делает Reviewer или Orchestrator (по политике цикла), и оркестратор завершает цикл только с чистым `git status`.
 
 ### Важно: грязное дерево в параллели
 

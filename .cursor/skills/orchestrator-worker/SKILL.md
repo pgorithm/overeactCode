@@ -62,7 +62,7 @@ After successful implementation and checks:
    - explicit handoff note: "awaiting test-coordinator full-suite verdict"
    - short change summary
    - changed files list
-   - whether a task-scoped commit was created, or whether the dispatcher/orchestrator must commit the prepared diff
+  - explicit note that worker did not create commits and commit is owned by orchestrator/reviewer
 
 If gate fails:
 
