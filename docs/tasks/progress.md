@@ -31,3 +31,5 @@
 - Worker handoff (batch TASK-015/TASK-017): обе задачи успешно реализованы, queue/progress воркерами не изменялись, коммиты воркерами не создавались.
 - Test Coordinator (batch TASK-015/TASK-017): выполнен serial full-suite (`npm run compile`; `npm test`) — `51 passing`, `test_verdict=pass` для обеих задач.
 - Reviewer (batch TASK-015/TASK-017): задачи одобрены и переведены в `done` после проверки acceptance criteria и coordinator evidence; lease metadata очищены.
+- TASK-019: добавлен `terminal` executor с policy-gated запуском команд и структурированным результатом (`stdout`, `stderr`, `exitCode`, `durationMs`, `status/reason`), включая deny-path без старта процесса.
+- TASK-019: пройдены проверки `npm run compile`, `npm test` (54 passing) и целевые test_steps через `terminalTool.test` (success/fail/denied сценарии).
