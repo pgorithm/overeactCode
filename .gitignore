@@ -1,4 +1,19 @@
-.cursor/
+.cursor/*
+!.cursor/commands/
+!.cursor/commands/**
+!.cursor/skills/
+!.cursor/skills/**
+!.cursor/subagents/
+!.cursor/subagents/**
+!.cursor/rules/
+!.cursor/rules/**
+
+# Cursor local/user-specific data
+.cursor/settings.json
+.cursor/settings.local.json
+.cursor/state/
+.cursor/cache/
+.cursor/logs/
 
 # Dependencies
 node_modules/
@@ -26,3 +41,4 @@ pnpm-debug.log*
 Thumbs.db
 .vscode/
 .idea/
+.vscode-test/
