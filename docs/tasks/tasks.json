@@ -105,22 +105,23 @@
         "TASK-001",
         "TASK-002"
       ],
-      "status": "pending",
-      "assignee": null,
-      "claimed_at": null,
-      "lease_until": null,
+      "status": "needs_review",
+      "assignee": "worker-task-003",
+      "claimed_at": "2026-04-28T15:04:00.000000Z",
+      "lease_until": "2026-04-28T17:04:00.000000Z",
       "review_required": true,
-      "status_reason": "queue_corruption: TASK-003 was unintentionally modified during TASK-004 worker run; reset to pending for clean re-claim.",
-      "test_verdict": "pass",
-      "test_owner": "test-coordinator",
-      "test_started_at": "2026-04-28T14:51:38.000000Z",
-      "test_finished_at": "2026-04-28T14:51:58.273285Z",
+      "status_reason": null,
+      "test_verdict": null,
+      "test_owner": null,
+      "test_started_at": null,
+      "test_finished_at": null,
       "artifacts": [
-        "tc_strategy: serial lane (single shared extension-host test environment)",
-        "tc_commands: npm.cmd run compile; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; npm.cmd test",
-        "tc_result: pass (compile ok; full npm test ok, 5 passing, extension host exit code 0)",
-        "tc_scope_note: full-suite result recorded at queue level for all current needs_review tasks in this batch",
-        "reviewer_note: rejected by reviewer — missing AgentSession model/types and lifecycle wiring (id, workspaceUri, userRequest, status, createdAt, updatedAt), no evidence of session creation from side composer, and no task-focused tests for required status transitions."
+        "lint: npm run compile -> pass",
+        "targeted tests: npx mocha --ui tdd dist/test/suite/agentSession.test.js -> pass (3 passing)",
+        "test_step: created test session from string request and verified initial status planning (agentSession.test: creates session with PRD fields and planning status).",
+        "test_step: verified status transition updates updatedAt (agentSession.test: updates session status and refreshed updatedAt).",
+        "summary: implemented AgentSession model/store with required fields and type-safe statuses; wired side composer and command flow to create planning sessions from user request.",
+        "handoff: awaiting test-coordinator full-suite verdict"
       ]
     },
     {

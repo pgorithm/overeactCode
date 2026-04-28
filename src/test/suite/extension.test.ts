@@ -10,4 +10,13 @@ suite("Overeact Code Smoke Test", () => {
     const commands = await vscode.commands.getCommands(true);
     assert.ok(commands.includes("overeactCode.openComposer"));
   });
+
+  test("registers create session command", async () => {
+    const extension = vscode.extensions.getExtension("overeact.overeact-code");
+    assert.ok(extension, "Extension should be discoverable by VS Code.");
+    await extension.activate();
+
+    const commands = await vscode.commands.getCommands(true);
+    assert.ok(commands.includes("overeactCode.createSession"));
+  });
 });

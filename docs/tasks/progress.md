@@ -6,3 +6,5 @@
 - TASK-002: проверена и подтверждена реализация side composer shell (команда открытия, поле ввода задачи, empty state прогресса, явная пометка про отсутствие inline edit mode в MVP); статус задачи переведен в `needs_review` с артефактами воркера.
 - Reviewer (batch): TASK-002 и TASK-004 одобрены и переведены в `done` после проверки `acceptance_criteria` и `test_verdict=pass`; lease metadata очищены.
 - Reviewer (batch): TASK-003 отклонена и возвращена в `work in progress` — отсутствует реализация AgentSession/статусных переходов и артефакты по required test_steps, добавлен `reviewer_note`.
+- TASK-003: реализованы `AgentSession` model/store (id, workspaceUri, userRequest, status, createdAt, updatedAt), типобезопасные статусы и создание session из user request в side composer/команде `overeactCode.createSession`; статус переведен в `needs_review`.
+- TASK-003: воркер quality gate пройден (`npm run compile`, `npx mocha --ui tdd dist/test/suite/agentSession.test.js` — 3 passing), передано в ожидание полного прогона test coordinator.
