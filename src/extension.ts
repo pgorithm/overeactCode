@@ -1,5 +1,13 @@
 import * as vscode from "vscode";
 import { AgentSessionStore } from "./agentSession";
+import { DiagnosticsTool, type WorkspaceDiagnostic } from "./diagnostics";
+import { evaluatePermissionPolicy } from "./permissionPolicy";
+import {
+  buildPolicyDeniedResult,
+  createPermissionPromptState,
+  resolvePermissionPromptDecision,
+  type PermissionPromptState
+} from "./permissionPrompt";
 import { ToolCallRecordStore } from "./toolCallRecord";
 import {
   ProviderSecretStorageAdapter,
@@ -10,9 +18,12 @@ import {
 const COMPOSER_VIEW_ID = "overeactCode.composerView";
 
 class OvereactComposerViewProvider implements vscode.WebviewViewProvider {
+  private readonly permissionPromptsBySession = new Map<string, PermissionPromptState>();
+
   public constructor(
     private readonly sessionStore: AgentSessionStore,
     private readonly toolCallStore: ToolCallRecordStore,
+    private readonly diagnosticsTool: DiagnosticsTool,
     private readonly getWorkspaceUri: () => string
   ) {}
 
@@ -25,6 +36,11 @@ class OvereactComposerViewProvider implements vscode.WebviewViewProvider {
       enableScripts: true
     };
     webviewView.webview.onDidReceiveMessage((message: unknown) => {
+      if (isPermissionDecisionMessage(message)) {
+        this.handlePermissionDecision(webviewView, message);
+        return;
+      }
+
       if (!isCreateSessionMessage(message)) {
         return;
       }
@@ -45,7 +61,9 @@ class OvereactComposerViewProvider implements vscode.WebviewViewProvider {
       void webviewView.webview.postMessage({
         type: "sessionCreated",
         session,
-        toolActivity
+        toolActivity,
+        diagnosticsSummary: this.createMockDiagnosticsSummary(),
+        permissionPrompt: this.permissionPromptsBySession.get(session.id) ?? null
       });
     });
     webviewView.webview.html = this.getHtml();
@@ -73,7 +91,152 @@ class OvereactComposerViewProvider implements vscode.WebviewViewProvider {
       () => "2026-04-28T18:00:02.000Z"
     );
 
+    const fileWriteRecord = this.toolCallStore.createPendingRecord({
+      sessionId,
+      toolName: "workspace.write_file",
+      inputSummary: "Apply patch proposal to src/extension.ts."
+    });
+    const confirmPrompt = createPermissionPromptState({
+      sessionId,
+      toolCallId: fileWriteRecord.id,
+      actionSummary: {
+        scope: "workspace",
+        actionType: "write_file",
+        target: "src/extension.ts"
+      },
+      evaluation: evaluatePermissionPolicy(
+        {
+          scope: "workspace",
+          actionType: "write_file",
+          target: "src/extension.ts"
+        },
+        []
+      )
+    });
+    if (confirmPrompt) {
+      this.permissionPromptsBySession.set(sessionId, confirmPrompt);
+    }
+
+    const deniedRecord = this.toolCallStore.createPendingRecord({
+      sessionId,
+      toolName: "run_command",
+      inputSummary: "Run rm -rf /tmp/build"
+    });
+    const deniedPrompt = createPermissionPromptState({
+      sessionId,
+      toolCallId: deniedRecord.id,
+      actionSummary: {
+        scope: "workspace",
+        actionType: "run_command",
+        target: "rm -rf /tmp/build"
+      },
+      evaluation: evaluatePermissionPolicy(
+        {
+          scope: "workspace",
+          actionType: "run_command",
+          target: "rm -rf /tmp/build"
+        },
+        []
+      )
+    });
+    if (deniedPrompt?.status === "resolved_policy_denied") {
+      this.toolCallStore.setPermissionDecision(
+        deniedRecord.id,
+        "denied",
+        () => "2026-04-28T18:00:03.000Z"
+      );
+      const deniedResult = buildPolicyDeniedResult(deniedPrompt);
+      this.toolCallStore.markFinished(
+        deniedRecord.id,
+        "failed",
+        deniedResult.logMessage,
+        () => "2026-04-28T18:00:04.000Z"
+      );
+    }
+
     return this.toolCallStore.getBySessionId(sessionId);
+  }
+
+  private handlePermissionDecision(
+    webviewView: vscode.WebviewView,
+    message: PermissionDecisionMessage
+  ): void {
+    const prompt = this.permissionPromptsBySession.get(message.sessionId);
+    if (!prompt || prompt.status !== "awaiting_user_decision") {
+      return;
+    }
+
+    const resolved = resolvePermissionPromptDecision({
+      prompt,
+      decision: message.decision
+    });
+    this.toolCallStore.setPermissionDecision(
+      prompt.toolCallId,
+      resolved.resolution === "user_approved" ? "approved" : "denied"
+    );
+    if (resolved.resolution === "user_approved") {
+      this.toolCallStore.markRunning(prompt.toolCallId);
+      this.toolCallStore.markFinished(
+        prompt.toolCallId,
+        "succeeded",
+        resolved.logMessage
+      );
+    } else {
+      this.toolCallStore.markFinished(
+        prompt.toolCallId,
+        "failed",
+        resolved.logMessage
+      );
+      this.sessionStore.updateStatus(message.sessionId, "blocked");
+    }
+
+    this.permissionPromptsBySession.delete(message.sessionId);
+    const session = this.sessionStore.getById(message.sessionId);
+    void webviewView.webview.postMessage({
+      type: "permissionResolved",
+      sessionId: message.sessionId,
+      resolution: resolved.resolution,
+      sessionSignal: resolved.sessionSignal,
+      status: session?.status ?? "planning",
+      toolActivity: this.toolCallStore.getBySessionId(message.sessionId)
+    });
+  }
+
+  private createMockDiagnosticsSummary() {
+    const baselineDiagnostics: WorkspaceDiagnostic[] = [
+      {
+        filePath: "src/extension.ts",
+        uri: "file:///workspace/src/extension.ts",
+        message: "Prefer explicit return type.",
+        severity: "warning",
+        source: "eslint",
+        code: "explicit-function-return-type",
+        range: {
+          start: { line: 12, character: 0 },
+          end: { line: 12, character: 15 }
+        }
+      }
+    ];
+    const currentDiagnostics: WorkspaceDiagnostic[] = [
+      ...baselineDiagnostics,
+      {
+        filePath: "src/diagnostics.ts",
+        uri: "file:///workspace/src/diagnostics.ts",
+        message: "Type 'undefined' is not assignable to type 'string'.",
+        severity: "error",
+        source: "ts",
+        code: "2322",
+        range: {
+          start: { line: 44, character: 12 },
+          end: { line: 44, character: 22 }
+        }
+      }
+    ];
+
+    return this.diagnosticsTool.summarizeAgainstBaseline(
+      currentDiagnostics,
+      baselineDiagnostics
+    );
   }
 
   private getHtml(): string {
@@ -143,6 +306,18 @@ class OvereactComposerViewProvider implements vscode.WebviewViewProvider {
     .muted {
       color: var(--vscode-descriptionForeground);
     }
+    .prompt-card {
+      border: 1px solid var(--vscode-panel-border);
+      border-radius: 4px;
+      padding: 10px;
+      display: grid;
+      gap: 6px;
+      font-size: 12px;
+    }
+    .actions {
+      display: flex;
+      gap: 8px;
+    }
   </style>
 </head>
 <body>
@@ -159,6 +334,15 @@ class OvereactComposerViewProvider implements vscode.WebviewViewProvider {
     <label>Tool activity</label>
     <div class="empty-state" id="toolActivityState">No tool calls captured yet.</div>
   </div>
+  <div class="section">
+    <label>Diagnostics</label>
+    <div class="empty-state" id="diagnosticsState">No diagnostics snapshot captured yet.</div>
+    <div class="note">Diagnostics are IDE-reported and can be stale until the next analysis pass.</div>
+  </div>
+  <div class="section">
+    <label>Permission decisions</label>
+    <div class="empty-state" id="permissionPromptState">No pending permission decisions.</div>
+  </div>
   <div class="note">Inline edit mode is not included in MVP yet.</div>
   <script>
     const vscode = acquireVsCodeApi();
@@ -166,6 +350,8 @@ class OvereactComposerViewProvider implements vscode.WebviewViewProvider {
     const createSessionButton = document.getElementById("createSessionButton");
     const progressState = document.getElementById("progressState");
     const toolActivityState = document.getElementById("toolActivityState");
+    const diagnosticsState = document.getElementById("diagnosticsState");
+    const permissionPromptState = document.getElementById("permissionPromptState");
 
     function renderToolActivity(records) {
       if (!Array.isArray(records) || records.length === 0) {
@@ -191,6 +377,63 @@ class OvereactComposerViewProvider implements vscode.WebviewViewProvider {
       toolActivityState.appendChild(list);
     }
 
+    function renderDiagnosticsSummary(summary) {
+      if (!summary) {
+        diagnosticsState.textContent = "No diagnostics snapshot captured yet.";
+        return;
+      }
+
+      const preExistingCount = Array.isArray(summary.preExisting) ? summary.preExisting.length : 0;
+      const likelyNewCount = Array.isArray(summary.likelyNew) ? summary.likelyNew.length : 0;
+      const baselineText = summary.baselineAvailable
+        ? "Baseline available"
+        : "No baseline yet";
+
+      diagnosticsState.classList.remove("empty-state");
+      diagnosticsState.innerHTML =
+        "<strong>IDE diagnostics snapshot</strong>" +
+        "<div class='muted'>" + baselineText + " - potentially stale until next refresh.</div>" +
+        "<div>Pre-existing: " + preExistingCount + "</div>" +
+        "<div>Likely new: " + likelyNewCount + "</div>";
+    }
+
+    function renderPermissionPrompt(sessionId, prompt) {
+      if (!prompt || prompt.status !== "awaiting_user_decision") {
+        permissionPromptState.textContent = "No pending permission decisions.";
+        permissionPromptState.className = "empty-state";
+        return;
+      }
+
+      permissionPromptState.className = "prompt-card";
+      permissionPromptState.innerHTML =
+        "<strong>Confirmation required</strong>" +
+        "<span>" + prompt.promptMessage + "</span>" +
+        "<span class='muted'>Action: " + prompt.actionSummary.actionType + " (" + prompt.actionSummary.scope + ")</span>" +
+        "<span class='muted'>Target: " + prompt.actionSummary.target + "</span>" +
+        "<span class='muted'>Reason: " + prompt.decisionReason + "</span>" +
+        "<div class='actions'>" +
+          "<button id='approvePermissionButton'>Approve</button>" +
+          "<button id='rejectPermissionButton'>Reject</button>" +
+        "</div>";
+
+      const approveButton = document.getElementById("approvePermissionButton");
+      const rejectButton = document.getElementById("rejectPermissionButton");
+      approveButton.addEventListener("click", () => {
+        vscode.postMessage({
+          type: "permissionDecision",
+          sessionId,
+          decision: "approve"
+        });
+      });
+      rejectButton.addEventListener("click", () => {
+        vscode.postMessage({
+          type: "permissionDecision",
+          sessionId,
+          decision: "reject"
+        });
+      });
+    }
+
     createSessionButton.addEventListener("click", () => {
       vscode.postMessage({
         type: "createSession",
@@ -200,12 +443,22 @@ class OvereactComposerViewProvider implements vscode.WebviewViewProvider {
 
     window.addEventListener("message", (event) => {
       const message = event.data;
+      if (message && message.type === "permissionResolved") {
+        progressState.textContent =
+          "Permission result: " + message.resolution + " (" + message.sessionSignal + "). Session status: " + message.status + ".";
+        renderToolActivity(message.toolActivity);
+        renderPermissionPrompt(message.sessionId, null);
+        return;
+      }
+
       if (!message || message.type !== "sessionCreated" || !message.session) {
         return;
       }
 
       progressState.textContent = "Session " + message.session.id + " created with status " + message.session.status + ".";
       renderToolActivity(message.toolActivity);
+      renderDiagnosticsSummary(message.diagnosticsSummary);
+      renderPermissionPrompt(message.session.id, message.permissionPrompt);
     });
   </script>
 </body>
@@ -216,6 +469,12 @@ class OvereactComposerViewProvider implements vscode.WebviewViewProvider {
 interface CreateSessionMessage {
   type: "createSession";
   userRequest: string;
+}
+
+interface PermissionDecisionMessage {
+  type: "permissionDecision";
+  sessionId: string;
+  decision: "approve" | "reject";
 }
 
 function isCreateSessionMessage(value: unknown): value is CreateSessionMessage {
@@ -229,6 +488,22 @@ function isCreateSessionMessage(value: unknown): value is CreateSessionMessage {
   );
 }
 
+function isPermissionDecisionMessage(
+  value: unknown
+): value is PermissionDecisionMessage {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "type" in value &&
+    "sessionId" in value &&
+    "decision" in value &&
+    (value as { type: unknown }).type === "permissionDecision" &&
+    typeof (value as { sessionId: unknown }).sessionId === "string" &&
+    ((value as { decision: unknown }).decision === "approve" ||
+      (value as { decision: unknown }).decision === "reject")
+  );
+}
+
 export function activate(context: vscode.ExtensionContext): void {
   const secretStorage = new ProviderSecretStorageAdapter(context.secrets);
   const sessionStore = new AgentSessionStore();
@@ -236,6 +511,7 @@ export function activate(context: vscode.ExtensionContext): void {
   const viewProvider = new OvereactComposerViewProvider(
     sessionStore,
     toolCallStore,
+    new DiagnosticsTool(),
     () => vscode.workspace.workspaceFolders?.[0]?.uri.toString() ?? "workspace://unknown"
   );
   context.subscriptions.push(

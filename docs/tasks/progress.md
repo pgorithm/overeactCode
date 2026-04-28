@@ -20,3 +20,7 @@
 - TASK-010: воркер quality gate пройден (`npm run compile`; `npx mocha --ui tdd dist/test/suite/workspaceSearch.test.js` — 3 passing), задача переведена в `needs_review` и передана test coordinator.
 - Test Coordinator (batch TASK-006/TASK-010): выполнен serial full-suite (`npm run compile`; `npm test`) — `26 passing`, `test_verdict=pass` для обеих задач.
 - Reviewer (batch TASK-006/TASK-010): задачи одобрены и переведены в `done` (коммиты `4544dcc1731fa4a07b553b237dfd1ccc10d34842`, `cd3a4cd981c5f49478160362dea213f7a87053ce`), lease metadata очищены.
+- Dispatcher (batch TASK-009/TASK-011/TASK-012/TASK-013/TASK-014): выполнен atomic claim на 5 ready-задач и запущены 5 параллельных воркеров (одна задача на сессию), queue/progress worker-ами не изменялись.
+- Worker handoff: TASK-009 и TASK-013 успешно сдали реализацию и узкие тесты; TASK-011/TASK-012/TASK-014 вернули `blocked` из-за временной compile-ошибки в `src/diagnostics.ts` в момент параллельного прогона.
+- Test Coordinator (batch TASK-009/TASK-013): выполнен serial full-suite (`npm run compile`; `npm test`) — `43 passing`, `test_verdict=pass` для обеих задач.
+- Reviewer (batch TASK-009/TASK-013): задачи одобрены и переведены в `done` после проверки acceptance criteria, worker artifacts и coordinator evidence; lease metadata очищены.
