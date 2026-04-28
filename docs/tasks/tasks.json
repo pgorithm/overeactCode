@@ -901,7 +901,7 @@
       "claimed_at": null,
       "lease_until": null,
       "review_required": true,
-      "status_reason": "queue_corruption_fixed: mistakenly claimed as TASK-023 batch worker; restored by orchestrator",
+      "status_reason": null,
       "test_verdict": null,
       "test_owner": null,
       "test_started_at": null,

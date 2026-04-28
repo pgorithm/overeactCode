@@ -62,7 +62,7 @@ After successful implementation and checks:
    - explicit handoff note: "awaiting test-coordinator full-suite verdict"
    - short change summary
    - changed files list
-  - explicit note that worker did not create commits and commit is owned by orchestrator/reviewer
+   - explicit note that worker did not create commits and commit is owned by orchestrator/reviewer
 
 If gate fails:
 
