@@ -1,5 +1,9 @@
 import * as assert from "assert";
 import {
+  type FetchLike,
+  testProviderConnectivity
+} from "../../openAiCompatibleProvider";
+import {
   ProviderSecretStorageAdapter,
   type ProviderSettingsLike,
   redactSecrets,
@@ -177,5 +181,130 @@ suite("Provider configuration and secret storage", () => {
         review: "gpt-4.1-mini"
       }
     });
+  });
+
+  test("returns provider ready on a valid 200 response", async () => {
+    const fetchStub: FetchLike = async (_url, _init) => ({
+      ok: true,
+      status: 200,
+      statusText: "OK",
+      async json(): Promise<unknown> {
+        return {
+          choices: [
+            {
+              message: {
+                role: "assistant",
+                content: "pong"
+              }
+            }
+          ]
+        };
+      },
+      async text(): Promise<string> {
+        return "";
+      }
+    });
+
+    const result = await testProviderConnectivity(
+      {
+        baseUrl: "https://api.example.com/v1",
+        apiKey: "sk-live-test",
+        model: "gpt-4o-mini"
+      },
+      fetchStub
+    );
+
+    assert.strictEqual(result.ready, true);
+    assert.strictEqual(result.message, "Provider ready.");
+  });
+
+  test("posts a minimal chat/completions request to configurable base URL", async () => {
+    let capturedUrl = "";
+    let capturedBody = "";
+    const fetchStub: FetchLike = async (url, init) => {
+      capturedUrl = url;
+      capturedBody = init.body;
+      return {
+        ok: true,
+        status: 200,
+        statusText: "OK",
+        async json(): Promise<unknown> {
+          return { choices: [{ message: { role: "assistant", content: "ok" } }] };
+        },
+        async text(): Promise<string> {
+          return "";
+        }
+      };
+    };
+
+    await testProviderConnectivity(
+      {
+        baseUrl: "https://bothub.example/api/openai/v1/",
+        apiKey: "sk-test",
+        model: "meta-llama/llama-3.1-8b-instruct"
+      },
+      fetchStub
+    );
+
+    assert.strictEqual(
+      capturedUrl,
+      "https://bothub.example/api/openai/v1/chat/completions"
+    );
+    assert.deepStrictEqual(JSON.parse(capturedBody), {
+      model: "meta-llama/llama-3.1-8b-instruct",
+      messages: [{ role: "user", content: "ping" }],
+      max_tokens: 1,
+      temperature: 0
+    });
+  });
+
+  test("returns actionable unauthorized error without exposing api key", async () => {
+    const apiKey = "sk-secret-401";
+    const fetchStub: FetchLike = async (_url, _init) => ({
+      ok: false,
+      status: 401,
+      statusText: "Unauthorized",
+      async json(): Promise<unknown> {
+        return { error: { message: `invalid token ${apiKey}` } };
+      },
+      async text(): Promise<string> {
+        return `invalid token ${apiKey}`;
+      }
+    });
+
+    const result = await testProviderConnectivity(
+      {
+        baseUrl: "https://api.example.com/v1",
+        apiKey,
+        model: "gpt-4o-mini"
+      },
+      fetchStub
+    );
+
+    assert.strictEqual(result.ready, false);
+    assert.ok(result.message.includes("401 Unauthorized"));
+    assert.ok(result.message.includes("[REDACTED]"));
+    assert.ok(!result.message.includes(apiKey));
+  });
+
+  test("returns actionable network error without exposing api key", async () => {
+    const apiKey = "sk-network-secret";
+    const fetchStub: FetchLike = async (_url, _init) => {
+      throw new Error(`connection reset for key ${apiKey}`);
+    };
+
+    const result = await testProviderConnectivity(
+      {
+        baseUrl: "https://api.example.com/v1",
+        apiKey,
+        model: "gpt-4o-mini"
+      },
+      fetchStub
+    );
+
+    assert.strictEqual(result.ready, false);
+    assert.ok(result.message.includes("Network error"));
+    assert.ok(result.message.includes("[REDACTED]"));
+    assert.ok(!result.message.includes(apiKey));
   });
 });
