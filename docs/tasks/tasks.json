@@ -276,17 +276,25 @@
       "dependencies": [
         "TASK-001"
       ],
-      "status": "pending",
-      "assignee": null,
-      "claimed_at": null,
-      "lease_until": null,
+      "status": "needs_review",
+      "assignee": "worker-task-008",
+      "claimed_at": "2026-04-28T15:09:00.000000Z",
+      "lease_until": "2026-04-28T17:09:00.000000Z",
       "review_required": true,
       "status_reason": null,
       "test_verdict": null,
       "test_owner": null,
       "test_started_at": null,
       "test_finished_at": null,
-      "artifacts": []
+      "artifacts": [
+        "lint: npm run compile -> pass",
+        "targeted tests: npx mocha --ui tdd dist/test/suite/permissionPolicy.test.js -> pass (4 passing)",
+        "test_step: workspace read_file allowed by safe default (permissionPolicy.test: allows workspace read_file by safe default).",
+        "test_step: run_command without allow rule requires confirmation (permissionPolicy.test: requires confirmation for run_command without allow rule).",
+        "test_step: deny rule blocks matching action and returns policy_denied (permissionPolicy.test: deny policy blocks matching action with policy_denied).",
+        "summary: added PermissionPolicy model (scope/actionType/pattern/decision) and evaluator with explainable allow/confirm/deny results plus safe defaults for file writes, terminal commands, and git writes.",
+        "handoff: awaiting test-coordinator full-suite verdict"
+      ]
     },
     {
       "id": "TASK-009",
