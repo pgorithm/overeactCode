@@ -3,6 +3,12 @@ import { AgentSessionStore } from "./agentSession";
 import { DiagnosticsTool, type WorkspaceDiagnostic } from "./diagnostics";
 import { PatchEditingBoundary } from "./patchEditingBoundary";
 import { PatchProposalStore } from "./patchProposal";
+import {
+  createPatchReviewState,
+  resolvePatchAfterPermission,
+  resolvePatchReviewDecision,
+  type PatchReviewState
+} from "./patchReview";
 import { evaluatePermissionPolicy } from "./permissionPolicy";
 import {
   buildPolicyDeniedResult,
@@ -21,6 +27,8 @@ const COMPOSER_VIEW_ID = "overeactCode.composerView";
 
 class OvereactComposerViewProvider implements vscode.WebviewViewProvider {
   private readonly permissionPromptsBySession = new Map<string, PermissionPromptState>();
+  private readonly patchReviewsBySession = new Map<string, PatchReviewState>();
+  private readonly patchReviewsByToolCallId = new Map<string, PatchReviewState>();
   private readonly patchProposalStore = new PatchProposalStore();
   private readonly patchEditingBoundary = new PatchEditingBoundary();
 
@@ -40,6 +48,16 @@ class OvereactComposerViewProvider implements vscode.WebviewViewProvider {
       enableScripts: true
     };
     webviewView.webview.onDidReceiveMessage((message: unknown) => {
+      if (isPatchPreviewRequestMessage(message)) {
+        void this.openPatchDiffPreview(message.sessionId, message.proposalId);
+        return;
+      }
+
+      if (isPatchReviewDecisionMessage(message)) {
+        void this.handlePatchReviewDecision(webviewView, message);
+        return;
+      }
+
       if (isPermissionDecisionMessage(message)) {
         this.handlePermissionDecision(webviewView, message);
         return;
@@ -66,6 +84,7 @@ class OvereactComposerViewProvider implements vscode.WebviewViewProvider {
         type: "sessionCreated",
         session,
         toolActivity,
+        patchReview: this.patchReviewsBySession.get(session.id) ?? null,
         diagnosticsSummary: this.createMockDiagnosticsSummary(),
         permissionPrompt: this.permissionPromptsBySession.get(session.id) ?? null
       });
@@ -108,27 +127,12 @@ class OvereactComposerViewProvider implements vscode.WebviewViewProvider {
     this.patchEditingBoundary.createEditRequest({
       proposal: patchProposal
     });
-    const confirmPrompt = createPermissionPromptState({
-      sessionId,
-      toolCallId: fileWriteRecord.id,
-      actionSummary: {
-        scope: "workspace",
-        actionType: "write_file",
-        target: "src/extension.ts"
-      },
-      evaluation: evaluatePermissionPolicy(
-        {
-          scope: "workspace",
-          actionType: "write_file",
-          target: "src/extension.ts"
-        },
-        []
-      )
+    const patchReview = createPatchReviewState({
+      proposal: patchProposal,
+      toolCallId: fileWriteRecord.id
     });
-    if (confirmPrompt) {
-      this.permissionPromptsBySession.set(sessionId, confirmPrompt);
-    }
-
+    this.patchReviewsBySession.set(sessionId, patchReview);
+    this.patchReviewsByToolCallId.set(fileWriteRecord.id, patchReview);
     const deniedRecord = this.toolCallStore.createPendingRecord({
       sessionId,
       toolName: "run_command",
@@ -186,18 +190,39 @@ class OvereactComposerViewProvider implements vscode.WebviewViewProvider {
       prompt.toolCallId,
       resolved.resolution === "user_approved" ? "approved" : "denied"
     );
+    const relatedPatchReview = this.patchReviewsByToolCallId.get(prompt.toolCallId);
     if (resolved.resolution === "user_approved") {
       this.toolCallStore.markRunning(prompt.toolCallId);
+      const patchResolution = resolvePatchAfterPermission({ approved: true });
+      if (relatedPatchReview) {
+        this.patchProposalStore.updateStatus(relatedPatchReview.proposalId, "applied");
+        const updatedPatchReview: PatchReviewState = {
+          ...relatedPatchReview,
+          status: patchResolution.status
+        };
+        this.patchReviewsBySession.set(message.sessionId, updatedPatchReview);
+        this.patchReviewsByToolCallId.set(prompt.toolCallId, updatedPatchReview);
+      }
       this.toolCallStore.markFinished(
         prompt.toolCallId,
         "succeeded",
-        resolved.logMessage
+        relatedPatchReview ? patchResolution.logMessage : resolved.logMessage
       );
     } else {
+      const patchResolution = resolvePatchAfterPermission({ approved: false });
+      if (relatedPatchReview) {
+        this.patchProposalStore.updateStatus(relatedPatchReview.proposalId, "rejected");
+        const updatedPatchReview: PatchReviewState = {
+          ...relatedPatchReview,
+          status: patchResolution.status
+        };
+        this.patchReviewsBySession.set(message.sessionId, updatedPatchReview);
+        this.patchReviewsByToolCallId.set(prompt.toolCallId, updatedPatchReview);
+      }
       this.toolCallStore.markFinished(
         prompt.toolCallId,
         "failed",
-        resolved.logMessage
+        relatedPatchReview ? patchResolution.logMessage : resolved.logMessage
       );
       this.sessionStore.updateStatus(message.sessionId, "blocked");
     }
@@ -210,8 +235,134 @@ class OvereactComposerViewProvider implements vscode.WebviewViewProvider {
       resolution: resolved.resolution,
       sessionSignal: resolved.sessionSignal,
       status: session?.status ?? "planning",
+      patchReview: this.patchReviewsBySession.get(message.sessionId) ?? null,
       toolActivity: this.toolCallStore.getBySessionId(message.sessionId)
     });
+  }
+
+  private async handlePatchReviewDecision(
+    webviewView: vscode.WebviewView,
+    message: PatchReviewDecisionMessage
+  ): Promise<void> {
+    const patchReview = this.patchReviewsBySession.get(message.sessionId);
+    if (!patchReview || patchReview.proposalId !== message.proposalId) {
+      return;
+    }
+
+    const policyEvaluation = evaluatePermissionPolicy(
+      {
+        scope: "workspace",
+        actionType: "write_file",
+        target: "src/extension.ts"
+      },
+      []
+    );
+    const reviewResult = resolvePatchReviewDecision({
+      decision: message.decision,
+      policyEvaluation
+    });
+    const updatedPatchReview: PatchReviewState = {
+      ...patchReview,
+      status: reviewResult.status
+    };
+    this.patchReviewsBySession.set(message.sessionId, updatedPatchReview);
+    this.patchReviewsByToolCallId.set(patchReview.toolCallId, updatedPatchReview);
+
+    if (reviewResult.resolution === "rejected") {
+      this.patchProposalStore.updateStatus(patchReview.proposalId, "rejected");
+      this.toolCallStore.setPermissionDecision(patchReview.toolCallId, "denied");
+      this.toolCallStore.markFinished(
+        patchReview.toolCallId,
+        "failed",
+        reviewResult.logMessage
+      );
+      const session = this.sessionStore.updateStatus(message.sessionId, "blocked");
+      void webviewView.webview.postMessage({
+        type: "patchReviewResolved",
+        sessionId: message.sessionId,
+        proposalId: message.proposalId,
+        resolution: reviewResult.resolution,
+        sessionSignal: reviewResult.sessionSignal,
+        status: session.status,
+        patchReview: updatedPatchReview,
+        toolActivity: this.toolCallStore.getBySessionId(message.sessionId)
+      });
+      return;
+    }
+
+    if (reviewResult.resolution === "applied") {
+      this.patchProposalStore.updateStatus(patchReview.proposalId, "applied");
+      this.toolCallStore.setPermissionDecision(patchReview.toolCallId, "approved");
+      this.toolCallStore.markRunning(patchReview.toolCallId);
+      this.toolCallStore.markFinished(
+        patchReview.toolCallId,
+        "succeeded",
+        reviewResult.logMessage
+      );
+      void webviewView.webview.postMessage({
+        type: "patchReviewResolved",
+        sessionId: message.sessionId,
+        proposalId: message.proposalId,
+        resolution: reviewResult.resolution,
+        sessionSignal: reviewResult.sessionSignal,
+        status: "planning",
+        patchReview: updatedPatchReview,
+        toolActivity: this.toolCallStore.getBySessionId(message.sessionId)
+      });
+      return;
+    }
+
+    const confirmPrompt = createPermissionPromptState({
+      sessionId: message.sessionId,
+      toolCallId: patchReview.toolCallId,
+      actionSummary: {
+        scope: "workspace",
+        actionType: "write_file",
+        target: "src/extension.ts"
+      },
+      evaluation: policyEvaluation
+    });
+    if (confirmPrompt) {
+      this.permissionPromptsBySession.set(message.sessionId, confirmPrompt);
+    }
+
+    void webviewView.webview.postMessage({
+      type: "patchReviewResolved",
+      sessionId: message.sessionId,
+      proposalId: message.proposalId,
+      resolution: reviewResult.resolution,
+      sessionSignal: reviewResult.sessionSignal,
+      status: "planning",
+      patchReview: updatedPatchReview,
+      permissionPrompt: this.permissionPromptsBySession.get(message.sessionId) ?? null,
+      toolActivity: this.toolCallStore.getBySessionId(message.sessionId)
+    });
+  }
+
+  private async openPatchDiffPreview(
+    sessionId: string,
+    proposalId: string
+  ): Promise<void> {
+    const patchReview = this.patchReviewsBySession.get(sessionId);
+    if (!patchReview || patchReview.proposalId !== proposalId) {
+      return;
+    }
+
+    const preview = extractDiffPreview(patchReview.diff);
+    const beforeDoc = await vscode.workspace.openTextDocument({
+      language: "plaintext",
+      content: preview.before
+    });
+    const afterDoc = await vscode.workspace.openTextDocument({
+      language: "plaintext",
+      content: preview.after
+    });
+    await vscode.commands.executeCommand(
+      "vscode.diff",
+      beforeDoc.uri,
+      afterDoc.uri,
+      `Patch Preview: ${patchReview.fileUri}`
+    );
   }
 
   private createMockDiagnosticsSummary() {
@@ -352,6 +503,10 @@ class OvereactComposerViewProvider implements vscode.WebviewViewProvider {
     <div class="note">Diagnostics are IDE-reported and can be stale until the next analysis pass.</div>
   </div>
   <div class="section">
+    <label>Patch review</label>
+    <div class="empty-state" id="patchReviewState">No patch proposals yet.</div>
+  </div>
+  <div class="section">
     <label>Permission decisions</label>
     <div class="empty-state" id="permissionPromptState">No pending permission decisions.</div>
   </div>
@@ -363,6 +518,7 @@ class OvereactComposerViewProvider implements vscode.WebviewViewProvider {
     const progressState = document.getElementById("progressState");
     const toolActivityState = document.getElementById("toolActivityState");
     const diagnosticsState = document.getElementById("diagnosticsState");
+    const patchReviewState = document.getElementById("patchReviewState");
     const permissionPromptState = document.getElementById("permissionPromptState");
 
     function renderToolActivity(records) {
@@ -446,6 +602,57 @@ class OvereactComposerViewProvider implements vscode.WebviewViewProvider {
       });
     }
 
+    function renderPatchReview(sessionId, review) {
+      if (!review) {
+        patchReviewState.textContent = "No patch proposals yet.";
+        patchReviewState.className = "empty-state";
+        return;
+      }
+
+      patchReviewState.className = "prompt-card";
+      patchReviewState.innerHTML =
+        "<strong>Patch proposal</strong>" +
+        "<span class='muted'>Target: " + review.fileUri + "</span>" +
+        "<span class='muted'>Status: " + review.status + "</span>" +
+        "<div class='actions'>" +
+          "<button id='openDiffPreviewButton'>Open diff preview</button>" +
+          "<button id='approvePatchButton'>Approve patch</button>" +
+          "<button id='rejectPatchButton'>Reject patch</button>" +
+        "</div>";
+
+      const openDiffPreviewButton = document.getElementById("openDiffPreviewButton");
+      const approvePatchButton = document.getElementById("approvePatchButton");
+      const rejectPatchButton = document.getElementById("rejectPatchButton");
+      if (review.status !== "proposed") {
+        approvePatchButton.disabled = true;
+        rejectPatchButton.disabled = true;
+      }
+
+      openDiffPreviewButton.addEventListener("click", () => {
+        vscode.postMessage({
+          type: "openPatchDiffPreview",
+          sessionId,
+          proposalId: review.proposalId
+        });
+      });
+      approvePatchButton.addEventListener("click", () => {
+        vscode.postMessage({
+          type: "patchReviewDecision",
+          sessionId,
+          proposalId: review.proposalId,
+          decision: "approve"
+        });
+      });
+      rejectPatchButton.addEventListener("click", () => {
+        vscode.postMessage({
+          type: "patchReviewDecision",
+          sessionId,
+          proposalId: review.proposalId,
+          decision: "reject"
+        });
+      });
+    }
+
     createSessionButton.addEventListener("click", () => {
       vscode.postMessage({
         type: "createSession",
@@ -458,8 +665,18 @@ class OvereactComposerViewProvider implements vscode.WebviewViewProvider {
       if (message && message.type === "permissionResolved") {
         progressState.textContent =
           "Permission result: " + message.resolution + " (" + message.sessionSignal + "). Session status: " + message.status + ".";
+        renderPatchReview(message.sessionId, message.patchReview);
         renderToolActivity(message.toolActivity);
         renderPermissionPrompt(message.sessionId, null);
+        return;
+      }
+
+      if (message && message.type === "patchReviewResolved") {
+        progressState.textContent =
+          "Patch review: " + message.resolution + " (" + message.sessionSignal + "). Session status: " + message.status + ".";
+        renderPatchReview(message.sessionId, message.patchReview);
+        renderToolActivity(message.toolActivity);
+        renderPermissionPrompt(message.sessionId, message.permissionPrompt || null);
         return;
       }
 
@@ -470,6 +687,7 @@ class OvereactComposerViewProvider implements vscode.WebviewViewProvider {
       progressState.textContent = "Session " + message.session.id + " created with status " + message.session.status + ".";
       renderToolActivity(message.toolActivity);
       renderDiagnosticsSummary(message.diagnosticsSummary);
+      renderPatchReview(message.session.id, message.patchReview);
       renderPermissionPrompt(message.session.id, message.permissionPrompt);
     });
   </script>
@@ -486,6 +704,19 @@ interface CreateSessionMessage {
 interface PermissionDecisionMessage {
   type: "permissionDecision";
   sessionId: string;
+  decision: "approve" | "reject";
+}
+
+interface PatchPreviewRequestMessage {
+  type: "openPatchDiffPreview";
+  sessionId: string;
+  proposalId: string;
+}
+
+interface PatchReviewDecisionMessage {
+  type: "patchReviewDecision";
+  sessionId: string;
+  proposalId: string;
   decision: "approve" | "reject";
 }
 
@@ -514,6 +745,65 @@ function isPermissionDecisionMessage(
     ((value as { decision: unknown }).decision === "approve" ||
       (value as { decision: unknown }).decision === "reject")
   );
+}
+
+function isPatchPreviewRequestMessage(
+  value: unknown
+): value is PatchPreviewRequestMessage {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "type" in value &&
+    "sessionId" in value &&
+    "proposalId" in value &&
+    (value as { type: unknown }).type === "openPatchDiffPreview" &&
+    typeof (value as { sessionId: unknown }).sessionId === "string" &&
+    typeof (value as { proposalId: unknown }).proposalId === "string"
+  );
+}
+
+function isPatchReviewDecisionMessage(
+  value: unknown
+): value is PatchReviewDecisionMessage {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "type" in value &&
+    "sessionId" in value &&
+    "proposalId" in value &&
+    "decision" in value &&
+    (value as { type: unknown }).type === "patchReviewDecision" &&
+    typeof (value as { sessionId: unknown }).sessionId === "string" &&
+    typeof (value as { proposalId: unknown }).proposalId === "string" &&
+    ((value as { decision: unknown }).decision === "approve" ||
+      (value as { decision: unknown }).decision === "reject")
+  );
+}
+
+function extractDiffPreview(diff: string): { before: string; after: string } {
+  const beforeLines: string[] = [];
+  const afterLines: string[] = [];
+
+  for (const line of diff.split(/\r?\n/)) {
+    if (line.startsWith("@@")) {
+      continue;
+    }
+    if (line.startsWith("-")) {
+      beforeLines.push(line.slice(1));
+      continue;
+    }
+    if (line.startsWith("+")) {
+      afterLines.push(line.slice(1));
+      continue;
+    }
+    beforeLines.push(line);
+    afterLines.push(line);
+  }
+
+  return {
+    before: beforeLines.join("\n"),
+    after: afterLines.join("\n")
+  };
 }
 
 export function activate(context: vscode.ExtensionContext): void {

@@ -27,3 +27,7 @@
 - TASK-011 rerun: повторный worker-проход и full-suite Test Coordinator (`npm run compile`; `npm test` — 43 passing) прошли успешно; задача одобрена reviewer и переведена из `blocked` в `done`.
 - Dispatcher rerun (from scratch): TASK-012 и TASK-014 перезапущены по запросу пользователя с новым claim и отдельными worker-сессиями; получены корректные handoff без изменений queue/progress и без worker-коммитов.
 - Test Coordinator + Reviewer (batch TASK-012/TASK-014): serial full-suite (`npm run compile`; `npm test` — 44 passing) пройден, обе задачи одобрены reviewer и переведены в `done`, lease metadata очищены.
+- Dispatcher: в батче TASK-015/TASK-017 выявлена и исправлена queue-corruption при claim (ошибочно затронута TASK-016); TASK-016 возвращена в `pending` с `status_reason`, после чего выполнен корректный claim TASK-017.
+- Worker handoff (batch TASK-015/TASK-017): обе задачи успешно реализованы, queue/progress воркерами не изменялись, коммиты воркерами не создавались.
+- Test Coordinator (batch TASK-015/TASK-017): выполнен serial full-suite (`npm run compile`; `npm test`) — `51 passing`, `test_verdict=pass` для обеих задач.
+- Reviewer (batch TASK-015/TASK-017): задачи одобрены и переведены в `done` после проверки acceptance criteria и coordinator evidence; lease metadata очищены.
