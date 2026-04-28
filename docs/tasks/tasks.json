@@ -1,0 +1,774 @@
+{
+  "agent_instructions": {
+    "before_start": [
+      "Прочитай этот файл, docs/new-agents.md и git log --oneline -20",
+      "Роль оркестратор (команда /ralph или ведение очереди целиком): следуй docs/prompts/RALPH-CURSOR_ORCHESTRATOR.md и docs/RALPH-ORCHESTRATION-QUICKSTART.md — ready-задачи, 1..K без конфликтов, atomic claim на каждую, затем K параллельных воркеров (отдельные сессии/Task, одна задача на воркера); Test Coordinator и Reviewer по протоколу.",
+      "Роль воркер: ровно одна задача в work in progress с твоим assignee; не бери вторую из очереди сам.",
+      "Проверь, что все dependencies релевантной задачи имеют статус done"
+    ],
+    "during_work": [
+      "Работай только над выбранной задачей",
+      "Перед стартом задачи переведи status в work in progress и выстави assignee, claimed_at, lease_until",
+      "После реализации переведи status в needs_review и добавь артефакты проверок"
+    ],
+    "before_finish": [
+      "Запусти uv run ruff check . и task-focused тесты; full-suite pytest в parallel режиме подтверждает test-coordinator (или python -m ... fallback)",
+      "Выполни ВСЕ test_steps из задачи",
+      "Меняй status на done только после подтверждения reviewer"
+    ]
+  },
+  "tasks": [
+    {
+      "id": "TASK-001",
+      "category": "infrastructure",
+      "priority": "critical",
+      "description": "Создать базовый TypeScript VS Code extension scaffold для Overeact Code.",
+      "acceptance_criteria": [
+        "В репозитории есть минимальный VS Code extension project с package.json, tsconfig, src entrypoint и тестовой инфраструктурой.",
+        "Команды установки, компиляции и тестов задокументированы в package scripts.",
+        "Расширение имеет имя, displayName и activationEvents, соответствующие MVP side composer."
+      ],
+      "test_steps": [
+        "Запустить npm install и убедиться, что зависимости устанавливаются без ошибок.",
+        "Запустить npm run compile и убедиться, что TypeScript компилируется без ошибок.",
+        "Запустить npm test и убедиться, что базовый smoke test проходит."
+      ],
+      "dependencies": [],
+      "status": "pending",
+      "assignee": null,
+      "claimed_at": null,
+      "lease_until": null,
+      "review_required": true,
+      "status_reason": null,
+      "test_verdict": null,
+      "test_owner": null,
+      "test_started_at": null,
+      "test_finished_at": null,
+      "artifacts": []
+    },
+    {
+      "id": "TASK-002",
+      "category": "ui",
+      "priority": "critical",
+      "description": "Добавить side composer panel shell и команду открытия Overeact Code.",
+      "acceptance_criteria": [
+        "Пользователь может открыть Overeact Code через command palette или contribution point.",
+        "Side panel отображает поле ввода задачи и пустое состояние для прогресса агента.",
+        "UI явно сообщает, что inline edit mode не входит в MVP."
+      ],
+      "test_steps": [
+        "Запустить npm run compile и убедиться, что проект компилируется.",
+        "Запустить extension host через VS Code Extension Development Host.",
+        "Открыть команду Overeact Code и убедиться, что side composer panel появляется с полем ввода задачи."
+      ],
+      "dependencies": [
+        "TASK-001"
+      ],
+      "status": "pending",
+      "assignee": null,
+      "claimed_at": null,
+      "lease_until": null,
+      "review_required": true,
+      "status_reason": null,
+      "test_verdict": null,
+      "test_owner": null,
+      "test_started_at": null,
+      "test_finished_at": null,
+      "artifacts": []
+    },
+    {
+      "id": "TASK-003",
+      "category": "functional",
+      "priority": "critical",
+      "description": "Реализовать модель AgentSession и локальное состояние жизненного цикла задачи.",
+      "acceptance_criteria": [
+        "AgentSession хранит id, workspaceUri, userRequest, status, createdAt и updatedAt согласно PRD.",
+        "Статусы idle, planning, editing, verifying, blocked, completed и failed представлены типобезопасно.",
+        "Side composer может создать новую session из пользовательского запроса."
+      ],
+      "test_steps": [
+        "Запустить npm test для unit tests модели AgentSession.",
+        "Создать тестовую session из строки запроса и проверить начальный статус planning.",
+        "Проверить, что переходы статусов обновляют updatedAt."
+      ],
+      "dependencies": [
+        "TASK-001",
+        "TASK-002"
+      ],
+      "status": "pending",
+      "assignee": null,
+      "claimed_at": null,
+      "lease_until": null,
+      "review_required": true,
+      "status_reason": null,
+      "test_verdict": null,
+      "test_owner": null,
+      "test_started_at": null,
+      "test_finished_at": null,
+      "artifacts": []
+    },
+    {
+      "id": "TASK-004",
+      "category": "security",
+      "priority": "critical",
+      "description": "Реализовать provider configuration с хранением API key в VS Code SecretStorage.",
+      "acceptance_criteria": [
+        "Пользователь может указать base URL, display name и default model в настройках расширения.",
+        "API key сохраняется только через VS Code SecretStorage и не попадает в plain text settings.",
+        "Ошибки конфигурации не выводят секреты в UI, логи или тестовые snapshots."
+      ],
+      "test_steps": [
+        "Запустить npm test для provider configuration и secret storage adapter.",
+        "Сохранить тестовый API key через mock SecretStorage и убедиться, что settings не содержат значение ключа.",
+        "Смоделировать ошибку сохранения и убедиться, что сообщение не содержит секрет."
+      ],
+      "dependencies": [
+        "TASK-001"
+      ],
+      "status": "pending",
+      "assignee": null,
+      "claimed_at": null,
+      "lease_until": null,
+      "review_required": true,
+      "status_reason": null,
+      "test_verdict": null,
+      "test_owner": null,
+      "test_started_at": null,
+      "test_finished_at": null,
+      "artifacts": []
+    },
+    {
+      "id": "TASK-005",
+      "category": "functional",
+      "priority": "high",
+      "description": "Добавить model routing для planning, coding, review, summarization и tool_decision.",
+      "acceptance_criteria": [
+        "ModelAssignment поддерживает taskType из PRD и provider-specific model name.",
+        "Если assignment отсутствует, агент использует default model provider configuration.",
+        "Настройки model routing можно прочитать и обновить без потери provider config."
+      ],
+      "test_steps": [
+        "Запустить npm test для model routing resolver.",
+        "Проверить, что planning использует назначенную модель при наличии assignment.",
+        "Проверить, что coding возвращает default model, если assignment не настроен."
+      ],
+      "dependencies": [
+        "TASK-004"
+      ],
+      "status": "pending",
+      "assignee": null,
+      "claimed_at": null,
+      "lease_until": null,
+      "review_required": true,
+      "status_reason": null,
+      "test_verdict": null,
+      "test_owner": null,
+      "test_started_at": null,
+      "test_finished_at": null,
+      "artifacts": []
+    },
+    {
+      "id": "TASK-006",
+      "category": "integration",
+      "priority": "critical",
+      "description": "Реализовать OpenAI-compatible provider client и lightweight connectivity test.",
+      "acceptance_criteria": [
+        "Provider client отправляет минимальный chat/completions compatible request на configurable base URL.",
+        "Connectivity test показывает success для валидного ответа и actionable error для ошибки.",
+        "Bothub рассматривается как конфигурируемый OpenAI-compatible endpoint без hardcoded assumptions."
+      ],
+      "test_steps": [
+        "Запустить npm test для provider client с mocked HTTP responses.",
+        "Смоделировать 200 OK и убедиться, что UI/сервис возвращает provider ready.",
+        "Смоделировать 401 или network error и убедиться, что сообщение не содержит API key."
+      ],
+      "dependencies": [
+        "TASK-004",
+        "TASK-005"
+      ],
+      "status": "pending",
+      "assignee": null,
+      "claimed_at": null,
+      "lease_until": null,
+      "review_required": true,
+      "status_reason": null,
+      "test_verdict": null,
+      "test_owner": null,
+      "test_started_at": null,
+      "test_finished_at": null,
+      "artifacts": []
+    },
+    {
+      "id": "TASK-007",
+      "category": "functional",
+      "priority": "critical",
+      "description": "Добавить ToolCallRecord и журнал tool activity для inspectable agent actions.",
+      "acceptance_criteria": [
+        "ToolCallRecord хранит sessionId, toolName, inputSummary, outputSummary, status, permissionDecision, startedAt и finishedAt.",
+        "Каждый tool call может перейти через pending, approved или denied, running, succeeded или failed.",
+        "Side composer получает структурированные записи tool activity для отображения прогресса."
+      ],
+      "test_steps": [
+        "Запустить npm test для ToolCallRecord и переходов статуса.",
+        "Создать mock tool call и проверить, что startedAt и finishedAt выставляются корректно.",
+        "Открыть side composer и убедиться, что mock activity отображается без raw verbose logs по умолчанию."
+      ],
+      "dependencies": [
+        "TASK-002",
+        "TASK-003"
+      ],
+      "status": "pending",
+      "assignee": null,
+      "claimed_at": null,
+      "lease_until": null,
+      "review_required": true,
+      "status_reason": null,
+      "test_verdict": null,
+      "test_owner": null,
+      "test_started_at": null,
+      "test_finished_at": null,
+      "artifacts": []
+    },
+    {
+      "id": "TASK-008",
+      "category": "security",
+      "priority": "critical",
+      "description": "Реализовать PermissionPolicy model и safe default decisions для agent actions.",
+      "acceptance_criteria": [
+        "PermissionPolicy поддерживает scope, actionType, pattern и decision из PRD.",
+        "По умолчанию file writes, terminal commands и git writes требуют confirmation или deny для рискованных действий.",
+        "Policy evaluator возвращает allow, confirm или deny с объяснимой причиной."
+      ],
+      "test_steps": [
+        "Запустить npm test для policy evaluator.",
+        "Проверить, что read_file для workspace path допускается при safe default.",
+        "Проверить, что run_command без allow rule требует confirmation.",
+        "Проверить, что deny rule блокирует matching action и возвращает policy_denied."
+      ],
+      "dependencies": [
+        "TASK-001"
+      ],
+      "status": "pending",
+      "assignee": null,
+      "claimed_at": null,
+      "lease_until": null,
+      "review_required": true,
+      "status_reason": null,
+      "test_verdict": null,
+      "test_owner": null,
+      "test_started_at": null,
+      "test_finished_at": null,
+      "artifacts": []
+    },
+    {
+      "id": "TASK-009",
+      "category": "ui",
+      "priority": "high",
+      "description": "Добавить permission decision UI для approve, reject и denied agent actions.",
+      "acceptance_criteria": [
+        "Когда policy требует confirmation, пользователь видит понятный prompt с action summary.",
+        "Approve переводит action в user_approved и позволяет продолжить выполнение.",
+        "Reject или policy deny логируются, а agent session получает blocked/adapt signal."
+      ],
+      "test_steps": [
+        "Запустить npm test для permission prompt view model.",
+        "Смоделировать file write confirmation и убедиться, что approve возвращает user_approved.",
+        "Смоделировать denied command и убедиться, что UI показывает причину блокировки."
+      ],
+      "dependencies": [
+        "TASK-002",
+        "TASK-007",
+        "TASK-008"
+      ],
+      "status": "pending",
+      "assignee": null,
+      "claimed_at": null,
+      "lease_until": null,
+      "review_required": true,
+      "status_reason": null,
+      "test_verdict": null,
+      "test_owner": null,
+      "test_started_at": null,
+      "test_finished_at": null,
+      "artifacts": []
+    },
+    {
+      "id": "TASK-010",
+      "category": "functional",
+      "priority": "critical",
+      "description": "Реализовать retrieval-first workspace search tools для файлов и символов.",
+      "acceptance_criteria": [
+        "Agent tool layer умеет выполнять targeted file search по workspace pattern или text query.",
+        "Symbol search использует доступные VS Code language/workspace APIs без чтения всего репозитория.",
+        "Search results возвращаются с достаточными metadata для выбора релевантных файлов."
+      ],
+      "test_steps": [
+        "Запустить npm test для workspace search adapters с mocked VS Code API.",
+        "В тестовом workspace выполнить file search и убедиться, что возвращаются только matching files.",
+        "Проверить, что large unrelated files не читаются автоматически после search."
+      ],
+      "dependencies": [
+        "TASK-003",
+        "TASK-007",
+        "TASK-008"
+      ],
+      "status": "pending",
+      "assignee": null,
+      "claimed_at": null,
+      "lease_until": null,
+      "review_required": true,
+      "status_reason": null,
+      "test_verdict": null,
+      "test_owner": null,
+      "test_started_at": null,
+      "test_finished_at": null,
+      "artifacts": []
+    },
+    {
+      "id": "TASK-011",
+      "category": "functional",
+      "priority": "critical",
+      "description": "Реализовать file read tool и ContextItem tracking с reason для выбранного контекста.",
+      "acceptance_criteria": [
+        "File read tool читает workspace files только после policy decision.",
+        "Каждый прочитанный важный файл создает ContextItem с sourceType file, sourceUri и reason.",
+        "Контекст можно суммаризировать, когда raw content становится слишком большим."
+      ],
+      "test_steps": [
+        "Запустить npm test для file read tool и ContextItem store.",
+        "Прочитать тестовый файл и убедиться, что ContextItem содержит reason.",
+        "Смоделировать oversized content и проверить, что сохраняется summary context вместо полного raw content."
+      ],
+      "dependencies": [
+        "TASK-010"
+      ],
+      "status": "pending",
+      "assignee": null,
+      "claimed_at": null,
+      "lease_until": null,
+      "review_required": true,
+      "status_reason": null,
+      "test_verdict": null,
+      "test_owner": null,
+      "test_started_at": null,
+      "test_finished_at": null,
+      "artifacts": []
+    },
+    {
+      "id": "TASK-012",
+      "category": "integration",
+      "priority": "high",
+      "description": "Добавить git awareness tools для status, diff и recent log.",
+      "acceptance_criteria": [
+        "Agent can inspect git status, diff и recent log через Git CLI или VS Code Git API.",
+        "Dirty files before task start фиксируются как pre-existing context.",
+        "Git tools являются read-only в MVP, кроме draft commit message flow без push."
+      ],
+      "test_steps": [
+        "Запустить npm test для git tool adapter с mocked command outputs.",
+        "Смоделировать dirty working tree и убедиться, что dirty files сохраняются в session context.",
+        "Проверить, что git push или destructive git action блокируется policy evaluator."
+      ],
+      "dependencies": [
+        "TASK-007",
+        "TASK-008"
+      ],
+      "status": "pending",
+      "assignee": null,
+      "claimed_at": null,
+      "lease_until": null,
+      "review_required": true,
+      "status_reason": null,
+      "test_verdict": null,
+      "test_owner": null,
+      "test_started_at": null,
+      "test_finished_at": null,
+      "artifacts": []
+    },
+    {
+      "id": "TASK-013",
+      "category": "integration",
+      "priority": "high",
+      "description": "Реализовать VS Code diagnostics read tool для Problems/linter/type errors.",
+      "acceptance_criteria": [
+        "Tool читает diagnostics для workspace или touched files через VS Code API.",
+        "Session summary может отличать pre-existing diagnostics от likely newly introduced issues, когда есть baseline.",
+        "UI помечает diagnostics как IDE-reported и потенциально stale."
+      ],
+      "test_steps": [
+        "Запустить npm test для diagnostics adapter с mocked VS Code diagnostics.",
+        "Смоделировать baseline diagnostics до edits и новые diagnostics после edits.",
+        "Убедиться, что summary классифицирует pre-existing и new diagnostics отдельно."
+      ],
+      "dependencies": [
+        "TASK-003",
+        "TASK-007"
+      ],
+      "status": "pending",
+      "assignee": null,
+      "claimed_at": null,
+      "lease_until": null,
+      "review_required": true,
+      "status_reason": null,
+      "test_verdict": null,
+      "test_owner": null,
+      "test_started_at": null,
+      "test_finished_at": null,
+      "artifacts": []
+    },
+    {
+      "id": "TASK-014",
+      "category": "functional",
+      "priority": "critical",
+      "description": "Реализовать PatchProposal model и structured patch generation boundary.",
+      "acceptance_criteria": [
+        "PatchProposal хранит sessionId, fileUri, diff, status и createdAt согласно PRD.",
+        "Agent core принимает только structured patch proposals для file edits, а не blind text replacement.",
+        "PatchProposal поддерживает proposed, applied, rejected и superseded statuses."
+      ],
+      "test_steps": [
+        "Запустить npm test для PatchProposal model и status transitions.",
+        "Создать patch proposal для тестового файла и убедиться, что diff сохраняется как structured content.",
+        "Проверить, что попытка применить edit без PatchProposal отклоняется."
+      ],
+      "dependencies": [
+        "TASK-003",
+        "TASK-007"
+      ],
+      "status": "pending",
+      "assignee": null,
+      "claimed_at": null,
+      "lease_until": null,
+      "review_required": true,
+      "status_reason": null,
+      "test_verdict": null,
+      "test_owner": null,
+      "test_started_at": null,
+      "test_finished_at": null,
+      "artifacts": []
+    },
+    {
+      "id": "TASK-015",
+      "category": "ui",
+      "priority": "critical",
+      "description": "Добавить diff preview и approve/reject workflow для patch proposals.",
+      "acceptance_criteria": [
+        "Пользователь может открыть diff preview для proposed patch до применения.",
+        "Approve применяет patch только после policy decision или user approval.",
+        "Reject помечает patch as rejected и agent loop получает feedback для адаптации плана."
+      ],
+      "test_steps": [
+        "Запустить npm test для patch review UI state.",
+        "В Extension Development Host создать mock patch и открыть diff preview.",
+        "Approve mock patch и убедиться, что status становится applied.",
+        "Reject mock patch и убедиться, что status становится rejected без изменения файла."
+      ],
+      "dependencies": [
+        "TASK-009",
+        "TASK-014"
+      ],
+      "status": "pending",
+      "assignee": null,
+      "claimed_at": null,
+      "lease_until": null,
+      "review_required": true,
+      "status_reason": null,
+      "test_verdict": null,
+      "test_owner": null,
+      "test_started_at": null,
+      "test_finished_at": null,
+      "artifacts": []
+    },
+    {
+      "id": "TASK-016",
+      "category": "security",
+      "priority": "high",
+      "description": "Обеспечить сохранение unrelated user changes при применении patches.",
+      "acceptance_criteria": [
+        "Перед применением patch agent проверяет актуальное состояние файла.",
+        "Если файл изменился относительно baseline, patch не перезаписывает unrelated changes.",
+        "При конфликте пользователь видит понятное сообщение и patch остается proposed или superseded."
+      ],
+      "test_steps": [
+        "Запустить npm test для patch apply conflict handling.",
+        "Создать baseline файла, внести unrelated user change и попытаться применить patch.",
+        "Убедиться, что unrelated user change сохраняется, а конфликтный patch не применяется молча."
+      ],
+      "dependencies": [
+        "TASK-012",
+        "TASK-014",
+        "TASK-015"
+      ],
+      "status": "pending",
+      "assignee": null,
+      "claimed_at": null,
+      "lease_until": null,
+      "review_required": true,
+      "status_reason": null,
+      "test_verdict": null,
+      "test_owner": null,
+      "test_started_at": null,
+      "test_finished_at": null,
+      "artifacts": []
+    },
+    {
+      "id": "TASK-017",
+      "category": "functional",
+      "priority": "critical",
+      "description": "Собрать local agent loop skeleton: understand task, retrieve context, plan, edit, verify, retry, summarize.",
+      "acceptance_criteria": [
+        "Agent loop проходит основные states AgentSession в правильном порядке.",
+        "Loop вызывает retrieval перед чтением больших файлов или редактированием.",
+        "Plan approval step позволяет пользователю принять план или запросить изменения."
+      ],
+      "test_steps": [
+        "Запустить npm test для agent loop state machine.",
+        "Смоделировать пользовательскую задачу и убедиться, что loop сначала создает plan после retrieval.",
+        "Смоделировать user request for plan changes и убедиться, что editing не начинается до approval."
+      ],
+      "dependencies": [
+        "TASK-006",
+        "TASK-011",
+        "TASK-014"
+      ],
+      "status": "pending",
+      "assignee": null,
+      "claimed_at": null,
+      "lease_until": null,
+      "review_required": true,
+      "status_reason": null,
+      "test_verdict": null,
+      "test_owner": null,
+      "test_started_at": null,
+      "test_finished_at": null,
+      "artifacts": []
+    },
+    {
+      "id": "TASK-018",
+      "category": "functional",
+      "priority": "high",
+      "description": "Интегрировать filesystem tools в agent loop через policy и tool logging.",
+      "acceptance_criteria": [
+        "Search, read и patch proposal tools вызываются через единый tool execution boundary.",
+        "Каждый filesystem tool call проходит policy evaluation и записывает ToolCallRecord.",
+        "Denied filesystem action приводит к адаптации плана или запросу guidance у пользователя."
+      ],
+      "test_steps": [
+        "Запустить npm test для filesystem tool executor.",
+        "Смоделировать allowed read_file и убедиться, что создается succeeded ToolCallRecord.",
+        "Смоделировать denied write_file и убедиться, что session получает blocked/adapt signal."
+      ],
+      "dependencies": [
+        "TASK-008",
+        "TASK-011",
+        "TASK-017"
+      ],
+      "status": "pending",
+      "assignee": null,
+      "claimed_at": null,
+      "lease_until": null,
+      "review_required": true,
+      "status_reason": null,
+      "test_verdict": null,
+      "test_owner": null,
+      "test_started_at": null,
+      "test_finished_at": null,
+      "artifacts": []
+    },
+    {
+      "id": "TASK-019",
+      "category": "integration",
+      "priority": "critical",
+      "description": "Реализовать terminal command execution для verification commands с capture stdout, stderr, exit code и duration.",
+      "acceptance_criteria": [
+        "Terminal tool запускает команды только после policy decision.",
+        "Execution result включает stdout, stderr, exit code и duration.",
+        "Unsafe или denied commands не запускаются и возвращают объяснимую причину."
+      ],
+      "test_steps": [
+        "Запустить npm test для terminal tool adapter с mocked process execution.",
+        "Смоделировать successful command и проверить captured stdout, exit code 0 и duration.",
+        "Смоделировать failing command и проверить stderr, non-zero exit code и failed ToolCallRecord.",
+        "Смоделировать denied command и убедиться, что process не стартует."
+      ],
+      "dependencies": [
+        "TASK-007",
+        "TASK-008",
+        "TASK-017"
+      ],
+      "status": "pending",
+      "assignee": null,
+      "claimed_at": null,
+      "lease_until": null,
+      "review_required": true,
+      "status_reason": null,
+      "test_verdict": null,
+      "test_owner": null,
+      "test_started_at": null,
+      "test_finished_at": null,
+      "artifacts": []
+    },
+    {
+      "id": "TASK-020",
+      "category": "functional",
+      "priority": "critical",
+      "description": "Добавить verification loop с анализом failed commands, diagnostics feedback и retry limits.",
+      "acceptance_criteria": [
+        "Agent loop переходит в verifying после proposed/applied edits.",
+        "Command failures и diagnostics передаются агенту как feedback для targeted retry.",
+        "Retry loop имеет настраиваемый лимит и завершает session as blocked или failed при исчерпании попыток."
+      ],
+      "test_steps": [
+        "Запустить npm test для verification loop.",
+        "Смоделировать failing test command и убедиться, что agent получает output summary до retry.",
+        "Смоделировать успешный retry и убедиться, что session переходит к summary.",
+        "Смоделировать исчерпанный retry limit и убедиться, что session становится blocked или failed."
+      ],
+      "dependencies": [
+        "TASK-013",
+        "TASK-019"
+      ],
+      "status": "pending",
+      "assignee": null,
+      "claimed_at": null,
+      "lease_until": null,
+      "review_required": true,
+      "status_reason": null,
+      "test_verdict": null,
+      "test_owner": null,
+      "test_started_at": null,
+      "test_finished_at": null,
+      "artifacts": []
+    },
+    {
+      "id": "TASK-021",
+      "category": "ui",
+      "priority": "high",
+      "description": "Отобразить plan, progress updates, tool activity, verification results и final summary в side composer.",
+      "acceptance_criteria": [
+        "Panel показывает текущий этап агентского loop и следующий ожидаемый шаг.",
+        "Tool activity отображается кратко по умолчанию и inspectable по запросу.",
+        "Final summary содержит changed files, checks run, unresolved issues, assumptions и suggested next steps."
+      ],
+      "test_steps": [
+        "Запустить npm test для composer view model.",
+        "Смоделировать session с plan, tool calls и verification result и проверить rendered state.",
+        "В Extension Development Host выполнить mock task и убедиться, что final summary содержит файлы, проверки и риски."
+      ],
+      "dependencies": [
+        "TASK-007",
+        "TASK-017",
+        "TASK-020"
+      ],
+      "status": "pending",
+      "assignee": null,
+      "claimed_at": null,
+      "lease_until": null,
+      "review_required": true,
+      "status_reason": null,
+      "test_verdict": null,
+      "test_owner": null,
+      "test_started_at": null,
+      "test_finished_at": null,
+      "artifacts": []
+    },
+    {
+      "id": "TASK-022",
+      "category": "security",
+      "priority": "high",
+      "description": "Провести MVP privacy and safety hardening для secrets, context sharing, commands и tool logs.",
+      "acceptance_criteria": [
+        "Secrets не попадают в prompts, summaries, tool logs, diagnostics или snapshots.",
+        "Broad project context не отправляется provider без retrieval-first selection.",
+        "Command safety defaults и file write diff previews соответствуют PRD security/privacy requirements."
+      ],
+      "test_steps": [
+        "Запустить npm test для redaction и privacy guard tests.",
+        "Смоделировать provider error с API key и убедиться, что key редактируется из logs и UI.",
+        "Смоделировать broad context request и убедиться, что agent требует targeted retrieval перед provider call.",
+        "Проверить manually, что risky command требует confirmation по default policy."
+      ],
+      "dependencies": [
+        "TASK-006",
+        "TASK-016",
+        "TASK-018",
+        "TASK-019"
+      ],
+      "status": "pending",
+      "assignee": null,
+      "claimed_at": null,
+      "lease_until": null,
+      "review_required": true,
+      "status_reason": null,
+      "test_verdict": null,
+      "test_owner": null,
+      "test_started_at": null,
+      "test_finished_at": null,
+      "artifacts": []
+    },
+    {
+      "id": "TASK-023",
+      "category": "functional",
+      "priority": "medium",
+      "description": "Добавить минимальный flow для draft commit message без автоматического push.",
+      "acceptance_criteria": [
+        "По запросу пользователя агент может собрать git status, diff и recent log для draft commit message.",
+        "Commit message draft отражает high-level diff intent и не создает commit без явного запроса.",
+        "Git push не выполняется автоматически и блокируется policy defaults."
+      ],
+      "test_steps": [
+        "Запустить npm test для commit draft helper.",
+        "Смоделировать changed files и recent log и убедиться, что draft message соответствует изменениям.",
+        "Проверить, что flow не вызывает git commit или git push без отдельного explicit user action."
+      ],
+      "dependencies": [
+        "TASK-012",
+        "TASK-021"
+      ],
+      "status": "pending",
+      "assignee": null,
+      "claimed_at": null,
+      "lease_until": null,
+      "review_required": true,
+      "status_reason": null,
+      "test_verdict": null,
+      "test_owner": null,
+      "test_started_at": null,
+      "test_finished_at": null,
+      "artifacts": []
+    },
+    {
+      "id": "TASK-024",
+      "category": "integration",
+      "priority": "medium",
+      "description": "Добавить dogfooding smoke scenario и packaging check для локального VS Code usage.",
+      "acceptance_criteria": [
+        "Есть documented smoke scenario для small real coding task через side composer.",
+        "Package или local Extension Development Host flow проверяет, что extension запускается без critical errors.",
+        "Dogfooding notes фиксируют unresolved MVP questions: API baseline, search depth, verification discovery, model routing UI и policy format."
+      ],
+      "test_steps": [
+        "Запустить npm run compile и npm test.",
+        "Запустить локальный Extension Development Host или packaging command, принятый в package scripts.",
+        "Выполнить smoke scenario: configure provider, submit small task, inspect plan, approve safe action, view final summary.",
+        "Убедиться, что unresolved questions зафиксированы в документации или issue/backlog без добавления не-MVP фич."
+      ],
+      "dependencies": [
+        "TASK-021",
+        "TASK-022",
+        "TASK-023"
+      ],
+      "status": "pending",
+      "assignee": null,
+      "claimed_at": null,
+      "lease_until": null,
+      "review_required": true,
+      "status_reason": null,
+      "test_verdict": null,
+      "test_owner": null,
+      "test_started_at": null,
+      "test_finished_at": null,
+      "artifacts": []
+    }
+  ]
+}
