@@ -124,6 +124,103 @@ suite("Agent loop state machine", () => {
     );
   });
 
+  test("provides failed command and diagnostics feedback before retry", () => {
+    const loop = new AgentLoopController();
+    const sessionId = "loop-4b";
+
+    loop.begin(sessionId, { maxRetryLimit: 2 });
+    loop.markContextRetrieved(sessionId);
+    loop.proposePlan(sessionId, "Implement feature and verify.");
+    loop.decidePlan(sessionId, "accept");
+    loop.beginEditing(sessionId);
+    loop.finishEditing(sessionId);
+
+    const stateAfterFailure = loop.runVerificationLoop(sessionId, {
+      failedCommands: [
+        {
+          command: "npm test",
+          stdout: "",
+          stderr: "1 failing",
+          exitCode: 1,
+          durationMs: 420
+        }
+      ],
+      diagnostics: {
+        preExistingCount: 1,
+        likelyNewCount: 2,
+        summary: "2 likely new diagnostics after patch apply."
+      }
+    });
+
+    assert.strictEqual(stateAfterFailure.status, "planning");
+    assert.strictEqual(stateAfterFailure.retryCount, 1);
+    assert.ok(stateAfterFailure.lastVerificationFeedback);
+    assert.match(
+      stateAfterFailure.lastVerificationFeedback?.retryGuidance ?? "",
+      /npm test/
+    );
+    assert.match(
+      stateAfterFailure.lastVerificationFeedback?.retryGuidance ?? "",
+      /2 likely new diagnostics/
+    );
+  });
+
+  test("completes verification after successful retry and publishes summary", () => {
+    const loop = new AgentLoopController();
+    const sessionId = "loop-4c";
+
+    loop.begin(sessionId, { maxRetryLimit: 2 });
+    loop.markContextRetrieved(sessionId);
+    loop.proposePlan(sessionId, "Initial implementation pass.");
+    loop.decidePlan(sessionId, "accept");
+    loop.beginEditing(sessionId);
+    loop.finishEditing(sessionId);
+
+    const failedAttempt = loop.runVerificationLoop(sessionId, {
+      failedCommands: [
+        {
+          command: "npm run compile",
+          stdout: "",
+          stderr: "TS2322",
+          exitCode: 2,
+          durationMs: 130
+        }
+      ],
+      diagnostics: {
+        preExistingCount: 0,
+        likelyNewCount: 1,
+        summary: "One new TS error."
+      }
+    });
+    assert.strictEqual(failedAttempt.status, "planning");
+
+    loop.proposePlan(sessionId, "Fix compile error and rerun checks.");
+    loop.decidePlan(sessionId, "accept");
+    loop.beginEditing(sessionId);
+    loop.finishEditing(sessionId);
+
+    const successAttempt = loop.runVerificationLoop(sessionId, {
+      failedCommands: [],
+      diagnostics: {
+        preExistingCount: 1,
+        likelyNewCount: 0,
+        summary: "Only baseline diagnostics remain."
+      }
+    });
+    assert.strictEqual(successAttempt.status, "completed");
+    assert.strictEqual(successAttempt.lastVerificationFeedback, null);
+
+    const summarized = loop.publishSummary(
+      sessionId,
+      "Verification succeeded after one targeted retry."
+    );
+    assert.strictEqual(summarized.summary, "Verification succeeded after one targeted retry.");
+    assert.deepStrictEqual(summarized.phaseHistory.slice(-2), [
+      "verification_finished",
+      "summary_published"
+    ]);
+  });
+
   test("moves session to blocked when retry limit is exhausted", () => {
     const loop = new AgentLoopController();
     const sessionId = "loop-5";
@@ -160,5 +257,57 @@ suite("Agent loop state machine", () => {
       exhausted.phaseHistory[exhausted.phaseHistory.length - 1],
       "verification_finished"
     );
+  });
+
+  test("can mark session as failed when retry limit is exhausted", () => {
+    const loop = new AgentLoopController();
+    const sessionId = "loop-5b";
+
+    loop.begin(sessionId, { maxRetryLimit: 1 });
+    loop.markContextRetrieved(sessionId);
+    loop.proposePlan(sessionId, "Attempt risky migration.");
+    loop.decidePlan(sessionId, "accept");
+    loop.beginEditing(sessionId);
+    loop.finishEditing(sessionId);
+
+    loop.runVerificationLoop(sessionId, {
+      failedCommands: [
+        {
+          command: "npm test",
+          stdout: "",
+          stderr: "failing",
+          exitCode: 1,
+          durationMs: 500
+        }
+      ],
+      diagnostics: {
+        preExistingCount: 0,
+        likelyNewCount: 1,
+        summary: "Initial failure."
+      }
+    });
+    const failedState = loop.runVerificationLoop(
+      sessionId,
+      {
+        failedCommands: [
+          {
+            command: "npm test",
+            stdout: "",
+            stderr: "still failing",
+            exitCode: 1,
+            durationMs: 510
+          }
+        ],
+        diagnostics: {
+          preExistingCount: 0,
+          likelyNewCount: 1,
+          summary: "Retry exhausted."
+        }
+      },
+      { terminalStatusOnLimit: "failed" }
+    );
+
+    assert.strictEqual(failedState.status, "failed");
+    assert.strictEqual(failedState.retryCount, 2);
   });
 });

@@ -55,6 +55,11 @@ export interface VerificationFeedback {
   retryGuidance: string;
 }
 
+export interface VerificationLoopInput {
+  failedCommands: VerificationCommandFailure[];
+  diagnostics: VerificationDiagnosticsFeedback;
+}
+
 export interface AgentLoopState {
   sessionId: string;
   status: AgentSessionStatus;
@@ -225,6 +230,30 @@ export class AgentLoopController {
     return state;
   }
 
+  public runVerificationLoop(
+    sessionId: string,
+    input: VerificationLoopInput,
+    options?: {
+      terminalStatusOnLimit?: "blocked" | "failed";
+    }
+  ): AgentLoopState {
+    const feedback = this.buildVerificationFeedback(input);
+    if (
+      feedback.failedCommands.length === 0 &&
+      feedback.diagnostics.likelyNewCount === 0
+    ) {
+      const state = this.requireState(sessionId);
+      state.lastVerificationFeedback = null;
+      return this.finishVerification(sessionId, "completed");
+    }
+
+    return this.handleVerificationFailure(
+      sessionId,
+      feedback,
+      options?.terminalStatusOnLimit
+    );
+  }
+
   public requestRetry(sessionId: string): AgentLoopState {
     const state = this.requireState(sessionId);
     state.retryCount += 1;
@@ -255,6 +284,33 @@ export class AgentLoopController {
     state.lastPlanDecision = null;
     state.phaseHistory.push("retry_requested");
     return state;
+  }
+
+  private buildVerificationFeedback(
+    input: VerificationLoopInput
+  ): VerificationFeedback {
+    const failedCommandList =
+      input.failedCommands.length > 0
+        ? input.failedCommands
+            .map(
+              (entry) =>
+                `${entry.command} (exit ${
+                  entry.exitCode === null ? "unknown" : entry.exitCode
+                }, ${entry.durationMs}ms)`
+            )
+            .join("; ")
+        : "none";
+    const diagnosticsSummary =
+      input.diagnostics.summary.trim().length > 0
+        ? input.diagnostics.summary.trim()
+        : "No diagnostics summary available.";
+    const retryGuidance = `Address failing commands [${failedCommandList}] and resolve ${input.diagnostics.likelyNewCount} likely new diagnostics. ${diagnosticsSummary}`;
+
+    return {
+      failedCommands: input.failedCommands,
+      diagnostics: input.diagnostics,
+      retryGuidance
+    };
   }
 
   public publishSummary(sessionId: string, summary: string): AgentLoopState {

@@ -35,3 +35,5 @@
 - TASK-019: пройдены проверки `npm run compile`, `npm test` (54 passing) и целевые test_steps через `terminalTool.test` (success/fail/denied сценарии).
 - TASK-020: добавлен verification loop feedback в `AgentLoopController` (failed commands + diagnostics + retry guidance) с возвратом в planning для targeted retry.
 - TASK-020: реализован конфигурируемый retry limit; при исчерпании попыток сессия переводится в `blocked/failed`, проверки пройдены (`npm run compile`, `npm test` — 56 passing).
+- TASK-020 (solo): добавлен `runVerificationLoop` с агрегацией failed commands/diagnostics в retry guidance и обработкой успешного retry до `completed`.
+- TASK-020 (solo): расширены unit-тесты verification loop (feedback до retry, успешный retry->summary, exhausted limit -> `blocked`/`failed`), quality gate пройден (`npm run compile`, `npm test` — 59 passing).

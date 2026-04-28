@@ -814,7 +814,7 @@
         "TASK-013",
         "TASK-019"
       ],
-      "status": "pending",
+      "status": "done",
       "assignee": null,
       "claimed_at": null,
       "lease_until": null,
