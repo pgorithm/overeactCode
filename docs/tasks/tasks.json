@@ -257,17 +257,25 @@
         "TASK-002",
         "TASK-003"
       ],
-      "status": "pending",
-      "assignee": null,
-      "claimed_at": null,
-      "lease_until": null,
+      "status": "needs_review",
+      "assignee": "worker-task-007",
+      "claimed_at": "2026-04-28T18:25:04.3192871+03:00",
+      "lease_until": "2026-04-28T20:25:04.3192871+03:00",
       "review_required": true,
       "status_reason": null,
       "test_verdict": null,
       "test_owner": null,
       "test_started_at": null,
       "test_finished_at": null,
-      "artifacts": []
+      "artifacts": [
+        "compile: npm run compile -> pass",
+        "targeted tests: npx mocha --ui tdd dist/test/suite/toolCallRecord.test.js -> pass (3 passing)",
+        "test_step: created mock tool call lifecycle in tests and verified startedAt/finishedAt transitions for approved-running-succeeded and denied flows (toolCallRecord.test).",
+        "test_step (manual): open side composer in Extension Development Host and verify tool activity cards show structured fields (tool, status, permission, input/output summary) without raw verbose logs.",
+        "summary: added ToolCallRecord model/store with status transitions and permission decisions, plus side composer tool activity rendering wired to structured records.",
+        "handoff: awaiting test-coordinator full compile/full-suite/security verdict",
+        "commit: pending"
+      ]
     },
     {
       "id": "TASK-008",

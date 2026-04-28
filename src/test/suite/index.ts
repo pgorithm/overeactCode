@@ -12,6 +12,7 @@ export function run(): Promise<void> {
   mocha.addFile(path.resolve(testsRoot, "./agentSession.test.js"));
   mocha.addFile(path.resolve(testsRoot, "./providerConfiguration.test.js"));
   mocha.addFile(path.resolve(testsRoot, "./permissionPolicy.test.js"));
+  mocha.addFile(path.resolve(testsRoot, "./toolCallRecord.test.js"));
 
   return new Promise((resolve, reject) => {
     mocha.run((failures) => {

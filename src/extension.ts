@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import { AgentSessionStore } from "./agentSession";
+import { ToolCallRecordStore } from "./toolCallRecord";
 import {
   ProviderSecretStorageAdapter,
   saveProviderConfiguration,
@@ -11,6 +12,7 @@ const COMPOSER_VIEW_ID = "overeactCode.composerView";
 class OvereactComposerViewProvider implements vscode.WebviewViewProvider {
   public constructor(
     private readonly sessionStore: AgentSessionStore,
+    private readonly toolCallStore: ToolCallRecordStore,
     private readonly getWorkspaceUri: () => string
   ) {}
 
@@ -39,12 +41,39 @@ class OvereactComposerViewProvider implements vscode.WebviewViewProvider {
         workspaceUri: this.getWorkspaceUri(),
         userRequest
       });
+      const toolActivity = this.createMockToolActivity(session.id);
       void webviewView.webview.postMessage({
         type: "sessionCreated",
-        session
+        session,
+        toolActivity
       });
     });
     webviewView.webview.html = this.getHtml();
+  }
+
+  private createMockToolActivity(sessionId: string) {
+    const pendingRecord = this.toolCallStore.createPendingRecord({
+      sessionId,
+      toolName: "workspace.search",
+      inputSummary: "Search TypeScript files related to the request."
+    });
+
+    this.toolCallStore.setPermissionDecision(
+      pendingRecord.id,
+      "approved",
+      () => "2026-04-28T18:00:00.000Z"
+    );
+    this.toolCallStore.markRunning(pendingRecord.id, () =>
+      "2026-04-28T18:00:01.000Z"
+    );
+    this.toolCallStore.markFinished(
+      pendingRecord.id,
+      "succeeded",
+      "Found 4 relevant files for the initial plan.",
+      () => "2026-04-28T18:00:02.000Z"
+    );
+
+    return this.toolCallStore.getBySessionId(sessionId);
   }
 
   private getHtml(): string {
@@ -95,6 +124,25 @@ class OvereactComposerViewProvider implements vscode.WebviewViewProvider {
       line-height: 1.4;
       color: var(--vscode-descriptionForeground);
     }
+    .activity-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      gap: 8px;
+    }
+    .activity-item {
+      border: 1px solid var(--vscode-panel-border);
+      border-radius: 4px;
+      padding: 8px;
+      font-size: 12px;
+      line-height: 1.3;
+      display: grid;
+      gap: 4px;
+    }
+    .muted {
+      color: var(--vscode-descriptionForeground);
+    }
   </style>
 </head>
 <body>
@@ -107,12 +155,41 @@ class OvereactComposerViewProvider implements vscode.WebviewViewProvider {
     <label>Agent progress</label>
     <div class="empty-state" id="progressState">No active agent run yet. Progress updates will appear here in future tasks.</div>
   </div>
+  <div class="section">
+    <label>Tool activity</label>
+    <div class="empty-state" id="toolActivityState">No tool calls captured yet.</div>
+  </div>
   <div class="note">Inline edit mode is not included in MVP yet.</div>
   <script>
     const vscode = acquireVsCodeApi();
     const taskInput = document.getElementById("taskInput");
     const createSessionButton = document.getElementById("createSessionButton");
     const progressState = document.getElementById("progressState");
+    const toolActivityState = document.getElementById("toolActivityState");
+
+    function renderToolActivity(records) {
+      if (!Array.isArray(records) || records.length === 0) {
+        toolActivityState.textContent = "No tool calls captured yet.";
+        return;
+      }
+
+      const list = document.createElement("ul");
+      list.className = "activity-list";
+      records.forEach((record) => {
+        const item = document.createElement("li");
+        item.className = "activity-item";
+        item.innerHTML =
+          "<strong>" + record.toolName + "</strong>" +
+          "<span class='muted'>Status: " + record.status + ", permission: " + record.permissionDecision + "</span>" +
+          "<span>Input: " + record.inputSummary + "</span>" +
+          "<span>Output: " + (record.outputSummary || "Pending") + "</span>";
+        list.appendChild(item);
+      });
+
+      toolActivityState.innerHTML = "";
+      toolActivityState.classList.remove("empty-state");
+      toolActivityState.appendChild(list);
+    }
 
     createSessionButton.addEventListener("click", () => {
       vscode.postMessage({
@@ -128,6 +205,7 @@ class OvereactComposerViewProvider implements vscode.WebviewViewProvider {
       }
 
       progressState.textContent = "Session " + message.session.id + " created with status " + message.session.status + ".";
+      renderToolActivity(message.toolActivity);
     });
   </script>
 </body>
@@ -154,8 +232,11 @@ function isCreateSessionMessage(value: unknown): value is CreateSessionMessage {
 export function activate(context: vscode.ExtensionContext): void {
   const secretStorage = new ProviderSecretStorageAdapter(context.secrets);
   const sessionStore = new AgentSessionStore();
-  const viewProvider = new OvereactComposerViewProvider(sessionStore, () =>
-    vscode.workspace.workspaceFolders?.[0]?.uri.toString() ?? "workspace://unknown"
+  const toolCallStore = new ToolCallRecordStore();
+  const viewProvider = new OvereactComposerViewProvider(
+    sessionStore,
+    toolCallStore,
+    () => vscode.workspace.workspaceFolders?.[0]?.uri.toString() ?? "workspace://unknown"
   );
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider(COMPOSER_VIEW_ID, viewProvider)
