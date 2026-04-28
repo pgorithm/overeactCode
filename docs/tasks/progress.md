@@ -37,3 +37,5 @@
 - TASK-020: реализован конфигурируемый retry limit; при исчерпании попыток сессия переводится в `blocked/failed`, проверки пройдены (`npm run compile`, `npm test` — 56 passing).
 - TASK-020 (solo): добавлен `runVerificationLoop` с агрегацией failed commands/diagnostics в retry guidance и обработкой успешного retry до `completed`.
 - TASK-020 (solo): расширены unit-тесты verification loop (feedback до retry, успешный retry->summary, exhausted limit -> `blocked`/`failed`), quality gate пройден (`npm run compile`, `npm test` — 59 passing).
+- TASK-021 (solo): добавлен `composerViewModel` и интеграция в side composer для отображения plan, текущего этапа/next step, verification result и final summary (changed files/checks/issues/assumptions/next steps).
+- TASK-021 (solo): tool activity отображается кратко по умолчанию и раскрывается по запросу; добавлены unit-тесты `composerViewModel.test`, quality gate пройден (`npm run compile`, `npm test` — 62 passing).

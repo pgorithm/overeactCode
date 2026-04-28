@@ -22,6 +22,7 @@ export function run(): Promise<void> {
   mocha.addFile(path.resolve(testsRoot, "./fileReadTool.test.js"));
   mocha.addFile(path.resolve(testsRoot, "./gitAwareness.test.js"));
   mocha.addFile(path.resolve(testsRoot, "./terminalTool.test.js"));
+  mocha.addFile(path.resolve(testsRoot, "./composerViewModel.test.js"));
 
   return new Promise((resolve, reject) => {
     mocha.run((failures) => {

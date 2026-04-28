@@ -1,5 +1,9 @@
 import * as vscode from "vscode";
-import { AgentSessionStore } from "./agentSession";
+import { AgentLoopController, AgentSessionStore } from "./agentSession";
+import {
+  buildComposerViewModel,
+  type ComposerFinalSummary
+} from "./composerViewModel";
 import { DiagnosticsTool, type WorkspaceDiagnostic } from "./diagnostics";
 import { PatchEditingBoundary } from "./patchEditingBoundary";
 import { PatchProposalStore } from "./patchProposal";
@@ -31,6 +35,7 @@ class OvereactComposerViewProvider implements vscode.WebviewViewProvider {
   private readonly patchReviewsByToolCallId = new Map<string, PatchReviewState>();
   private readonly patchProposalStore = new PatchProposalStore();
   private readonly patchEditingBoundary = new PatchEditingBoundary();
+  private readonly loopController = new AgentLoopController();
 
   public constructor(
     private readonly sessionStore: AgentSessionStore,
@@ -80,9 +85,14 @@ class OvereactComposerViewProvider implements vscode.WebviewViewProvider {
         userRequest
       });
       const toolActivity = this.createMockToolActivity(session.id);
+      const composerViewModel = this.createMockComposerViewModel(
+        session,
+        toolActivity
+      );
       void webviewView.webview.postMessage({
         type: "sessionCreated",
-        session,
+        session: this.sessionStore.getById(session.id) ?? session,
+        composerViewModel,
         toolActivity,
         patchReview: this.patchReviewsBySession.get(session.id) ?? null,
         diagnosticsSummary: this.createMockDiagnosticsSummary(),
@@ -402,6 +412,51 @@ class OvereactComposerViewProvider implements vscode.WebviewViewProvider {
     );
   }
 
+  private createMockComposerViewModel(
+    session: { id: string; status: "planning" | "editing" | "verifying" | "blocked" | "completed" | "failed" | "idle" },
+    toolActivity: ReturnType<ToolCallRecordStore["getBySessionId"]>
+  ) {
+    this.loopController.begin(session.id, { maxRetryLimit: 2 });
+    this.loopController.markContextRetrieved(session.id);
+    this.loopController.proposePlan(
+      session.id,
+      "1) Confirm scope from targeted files. 2) Apply minimal patch proposal. 3) Run compile/tests and summarize risks."
+    );
+    this.loopController.decidePlan(session.id, "accept");
+    this.loopController.beginEditing(session.id);
+    this.loopController.finishEditing(session.id);
+    this.loopController.runVerificationLoop(session.id, {
+      failedCommands: [],
+      diagnostics: {
+        preExistingCount: 1,
+        likelyNewCount: 0,
+        summary: "No likely new diagnostics after verification."
+      }
+    });
+    const loopState = this.loopController.publishSummary(
+      session.id,
+      "Updated composer rendering with plan, progress, tool activity, verification result and final summary."
+    );
+    const completedSession = this.sessionStore.updateStatus(session.id, "completed");
+    const finalSummary: ComposerFinalSummary = {
+      changedFiles: ["src/extension.ts", "src/composerViewModel.ts"],
+      checksRun: ["npm run compile", "npm test"],
+      unresolvedIssues: ["Manual Extension Development Host validation is still required."],
+      assumptions: ["Workspace has one active root for session context."],
+      suggestedNextSteps: [
+        "Run the side composer flow in Extension Development Host.",
+        "Review detailed tool activity only when needed."
+      ]
+    };
+
+    return buildComposerViewModel({
+      session: completedSession,
+      loopState,
+      toolActivity,
+      finalSummary
+    });
+  }
+
   private getHtml(): string {
     return `<!DOCTYPE html>
 <html lang="en">
@@ -494,8 +549,21 @@ class OvereactComposerViewProvider implements vscode.WebviewViewProvider {
     <div class="empty-state" id="progressState">No active agent run yet. Progress updates will appear here in future tasks.</div>
   </div>
   <div class="section">
+    <label>Plan</label>
+    <div class="empty-state" id="planState">No plan proposed yet.</div>
+  </div>
+  <div class="section">
     <label>Tool activity</label>
     <div class="empty-state" id="toolActivityState">No tool calls captured yet.</div>
+    <button id="toggleToolActivityButton" style="display:none;">Show details</button>
+  </div>
+  <div class="section">
+    <label>Verification</label>
+    <div class="empty-state" id="verificationState">No verification output yet.</div>
+  </div>
+  <div class="section">
+    <label>Final summary</label>
+    <div class="empty-state" id="finalSummaryState">No final summary yet.</div>
   </div>
   <div class="section">
     <label>Diagnostics</label>
@@ -516,17 +584,27 @@ class OvereactComposerViewProvider implements vscode.WebviewViewProvider {
     const taskInput = document.getElementById("taskInput");
     const createSessionButton = document.getElementById("createSessionButton");
     const progressState = document.getElementById("progressState");
+    const planState = document.getElementById("planState");
     const toolActivityState = document.getElementById("toolActivityState");
+    const toggleToolActivityButton = document.getElementById("toggleToolActivityButton");
+    const verificationState = document.getElementById("verificationState");
+    const finalSummaryState = document.getElementById("finalSummaryState");
     const diagnosticsState = document.getElementById("diagnosticsState");
     const patchReviewState = document.getElementById("patchReviewState");
     const permissionPromptState = document.getElementById("permissionPromptState");
+    let toolActivityRecords = [];
+    let fullToolActivityRecords = [];
+    let showFullToolActivity = false;
 
-    function renderToolActivity(records) {
+    function renderToolActivity(records, hiddenCount, showAll) {
       if (!Array.isArray(records) || records.length === 0) {
         toolActivityState.textContent = "No tool calls captured yet.";
+        toggleToolActivityButton.style.display = "none";
         return;
       }
 
+      toggleToolActivityButton.style.display = hiddenCount > 0 ? "inline-block" : "none";
+      toggleToolActivityButton.textContent = showAll ? "Hide details" : "Show details";
       const list = document.createElement("ul");
       list.className = "activity-list";
       records.forEach((record) => {
@@ -543,6 +621,52 @@ class OvereactComposerViewProvider implements vscode.WebviewViewProvider {
       toolActivityState.innerHTML = "";
       toolActivityState.classList.remove("empty-state");
       toolActivityState.appendChild(list);
+      if (hiddenCount > 0 && !showAll) {
+        const muted = document.createElement("div");
+        muted.className = "muted";
+        muted.textContent = hiddenCount + " additional tool calls hidden.";
+        toolActivityState.appendChild(muted);
+      }
+    }
+
+    function renderComposerViewModel(viewModel) {
+      if (!viewModel) {
+        return;
+      }
+      progressState.className = "prompt-card";
+      progressState.innerHTML =
+        "<strong>Current stage: " + viewModel.currentStage + "</strong>" +
+        "<span class='muted'>Next step: " + viewModel.nextStep + "</span>" +
+        "<span class='muted'>Progress updates: " + viewModel.progressUpdates.join(" -> ") + "</span>";
+
+      planState.className = "prompt-card";
+      planState.innerHTML = "<strong>Approved plan</strong><span>" + viewModel.planSummary + "</span>";
+
+      verificationState.className = "prompt-card";
+      verificationState.innerHTML =
+        "<strong>Status: " + viewModel.verification.status + "</strong>" +
+        "<span class='muted'>Retry count: " + viewModel.verification.retryCount + "</span>" +
+        "<span>Diagnostics: " + viewModel.verification.diagnosticsSummary + "</span>" +
+        "<span>Failed commands: " +
+        (viewModel.verification.failedCommands.length > 0
+          ? viewModel.verification.failedCommands.join(", ")
+          : "none") +
+        "</span>";
+
+      const finalSummary = viewModel.finalSummary;
+      finalSummaryState.className = "prompt-card";
+      finalSummaryState.innerHTML =
+        "<strong>Changed files</strong><span>" + finalSummary.changedFiles.join(", ") + "</span>" +
+        "<strong>Checks run</strong><span>" + finalSummary.checksRun.join(", ") + "</span>" +
+        "<strong>Unresolved issues</strong><span>" + finalSummary.unresolvedIssues.join("; ") + "</span>" +
+        "<strong>Assumptions</strong><span>" + finalSummary.assumptions.join("; ") + "</span>" +
+        "<strong>Suggested next steps</strong><span>" + finalSummary.suggestedNextSteps.join("; ") + "</span>";
+
+      toolActivityRecords = Array.isArray(viewModel.toolActivityDefault)
+        ? viewModel.toolActivityDefault.slice()
+        : [];
+      showFullToolActivity = false;
+      renderToolActivity(toolActivityRecords, viewModel.hiddenToolActivityCount || 0, showFullToolActivity);
     }
 
     function renderDiagnosticsSummary(summary) {
@@ -659,6 +783,16 @@ class OvereactComposerViewProvider implements vscode.WebviewViewProvider {
         userRequest: taskInput.value
       });
     });
+    toggleToolActivityButton.addEventListener("click", () => {
+      showFullToolActivity = !showFullToolActivity;
+      const visibleRecords = showFullToolActivity
+        ? fullToolActivityRecords
+        : toolActivityRecords;
+      const hiddenCount = showFullToolActivity
+        ? 0
+        : Math.max(fullToolActivityRecords.length - toolActivityRecords.length, 0);
+      renderToolActivity(visibleRecords, hiddenCount, showFullToolActivity);
+    });
 
     window.addEventListener("message", (event) => {
       const message = event.data;
@@ -666,7 +800,7 @@ class OvereactComposerViewProvider implements vscode.WebviewViewProvider {
         progressState.textContent =
           "Permission result: " + message.resolution + " (" + message.sessionSignal + "). Session status: " + message.status + ".";
         renderPatchReview(message.sessionId, message.patchReview);
-        renderToolActivity(message.toolActivity);
+        renderToolActivity(message.toolActivity, 0, true);
         renderPermissionPrompt(message.sessionId, null);
         return;
       }
@@ -675,7 +809,7 @@ class OvereactComposerViewProvider implements vscode.WebviewViewProvider {
         progressState.textContent =
           "Patch review: " + message.resolution + " (" + message.sessionSignal + "). Session status: " + message.status + ".";
         renderPatchReview(message.sessionId, message.patchReview);
-        renderToolActivity(message.toolActivity);
+        renderToolActivity(message.toolActivity, 0, true);
         renderPermissionPrompt(message.sessionId, message.permissionPrompt || null);
         return;
       }
@@ -684,8 +818,13 @@ class OvereactComposerViewProvider implements vscode.WebviewViewProvider {
         return;
       }
 
-      progressState.textContent = "Session " + message.session.id + " created with status " + message.session.status + ".";
-      renderToolActivity(message.toolActivity);
+      if (message.composerViewModel) {
+        fullToolActivityRecords = Array.isArray(message.toolActivity) ? message.toolActivity : [];
+        renderComposerViewModel(message.composerViewModel);
+      } else {
+        progressState.textContent = "Session " + message.session.id + " created with status " + message.session.status + ".";
+        renderToolActivity(message.toolActivity, 0, true);
+      }
       renderDiagnosticsSummary(message.diagnosticsSummary);
       renderPatchReview(message.session.id, message.patchReview);
       renderPermissionPrompt(message.session.id, message.permissionPrompt);
