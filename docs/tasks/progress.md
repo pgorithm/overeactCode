@@ -39,3 +39,7 @@
 - TASK-020 (solo): расширены unit-тесты verification loop (feedback до retry, успешный retry->summary, exhausted limit -> `blocked`/`failed`), quality gate пройден (`npm run compile`, `npm test` — 59 passing).
 - TASK-021 (solo): добавлен `composerViewModel` и интеграция в side composer для отображения plan, текущего этапа/next step, verification result и final summary (changed files/checks/issues/assumptions/next steps).
 - TASK-021 (solo): tool activity отображается кратко по умолчанию и раскрывается по запросу; добавлены unit-тесты `composerViewModel.test`, quality gate пройден (`npm run compile`, `npm test` — 62 passing).
+- Dispatcher (batch TASK-018/TASK-023): восстановлен orphaned claim TASK-018, исправлена queue-corruption при ошибочном claim TASK-022 вместо TASK-023, после чего TASK-023 корректно перезапущена отдельным worker.
+- Worker handoff (batch TASK-018/TASK-023): обе задачи успешно сдали реализацию и узкие проверки; queue/progress воркерами не изменялись, коммиты воркерами не создавались.
+- Test Coordinator (batch TASK-018/TASK-023): выполнен serial full-suite (`npm run compile`; `npm test`) — `65 passing`, `test_verdict=pass` для обеих задач.
+- Reviewer (batch TASK-018/TASK-023): задачи одобрены и переведены в `done` после проверки acceptance criteria, кода, lints и coordinator evidence; lease metadata очищены.

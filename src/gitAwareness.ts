@@ -19,6 +19,7 @@ export interface GitLogEntry {
 
 export interface DraftCommitMessageResult {
   status: GitStatusSnapshot;
+  diff: string;
   recentLog: GitLogEntry[];
   draftMessage: string;
 }
@@ -114,11 +115,13 @@ export class GitAwarenessTool {
 
   public async createDraftCommitMessage(): Promise<DraftCommitMessageResult> {
     const status = await this.inspectStatus();
+    const diff = await this.inspectDiff();
     const recentLog = await this.inspectRecentLog(5);
     const changedFilesLine =
       status.dirtyFiles.length > 0
         ? `Affected files: ${status.dirtyFiles.join(", ")}.`
         : "No changed files detected.";
+    const diffIntentLine = describeDiffIntent(diff);
     const recentStyleHint =
       recentLog.length > 0
         ? `Recent style hint: ${recentLog[0]?.subject}.`
@@ -126,8 +129,9 @@ export class GitAwarenessTool {
 
     return {
       status,
+      diff,
       recentLog,
-      draftMessage: `${status.hasChanges ? "Update" : "Review"} workspace changes.\n\n${changedFilesLine}\n${recentStyleHint}`
+      draftMessage: `${status.hasChanges ? "Update" : "Review"} workspace changes.\n\n${changedFilesLine}\n${diffIntentLine}\n${recentStyleHint}`
     };
   }
 
@@ -182,4 +186,16 @@ function parseGitStatus(stdout: string): GitStatusSnapshot {
     dirtyFiles,
     hasChanges: dirtyFiles.length > 0
   };
+}
+
+function describeDiffIntent(diff: string): string {
+  const trimmed = diff.trim();
+  if (trimmed.length === 0) {
+    return "Diff intent: no textual diff was detected.";
+  }
+
+  const filesChanged = (trimmed.match(/^diff --git /gm) ?? []).length;
+  const additions = (trimmed.match(/^\+(?!\+\+)/gm) ?? []).length;
+  const deletions = (trimmed.match(/^-(?!--)/gm) ?? []).length;
+  return `Diff intent: touches ${filesChanged} file(s), with ${additions} addition line(s) and ${deletions} deletion line(s).`;
 }

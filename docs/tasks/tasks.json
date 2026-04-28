@@ -749,7 +749,7 @@
         "TASK-011",
         "TASK-017"
       ],
-      "status": "work in progress",
+      "status": "done",
       "assignee": null,
       "claimed_at": null,
       "lease_until": null,
@@ -759,7 +759,23 @@
       "test_owner": null,
       "test_started_at": null,
       "test_finished_at": null,
-      "artifacts": []
+      "artifacts": [
+        "start_conditions: pass (TASK-018 status work in progress, assignee worker-task-018, dependencies TASK-008/TASK-011/TASK-017 done)",
+        "compile: npm run compile -> pass",
+        "targeted tests: npx mocha --ui tdd dist/test/suite/filesystemToolExecutor.test.js -> pass (2 passing)",
+        "test_step: filesystem tool executor tested via targeted suite.",
+        "test_step: allowed read_file creates succeeded ToolCallRecord (filesystemToolExecutor.test).",
+        "test_step: denied write_file creates denied ToolCallRecord and adapt_or_guidance signal.",
+        "lint: ReadLints on changed task files -> pass",
+        "summary: added unified filesystem execution boundary for search/read/patch proposal with policy evaluation and ToolCallRecord lifecycle; denied filesystem actions now produce adapt/guidance signal.",
+        "changed_files: src/filesystemToolExecutor.ts, src/test/suite/filesystemToolExecutor.test.ts, src/test/suite/index.ts",
+        "handoff: awaiting test-coordinator full-suite verdict",
+        "worker_note: no commit created by worker",
+        "tc_strategy: serial lane (single shared extension-host test environment)",
+        "tc_commands: npm run compile; npm test",
+        "tc_result: pass (compile ok; full npm test ok, 65 passing, extension host exit code 0)",
+        "reviewer_note: approved; acceptance criteria validated with worker artifacts, code inspection, lints, and test_verdict=pass."
+      ]
     },
     {
       "id": "TASK-019",
@@ -885,7 +901,7 @@
       "claimed_at": null,
       "lease_until": null,
       "review_required": true,
-      "status_reason": null,
+      "status_reason": "queue_corruption_fixed: mistakenly claimed as TASK-023 batch worker; restored by orchestrator",
       "test_verdict": null,
       "test_owner": null,
       "test_started_at": null,
@@ -911,7 +927,7 @@
         "TASK-012",
         "TASK-021"
       ],
-      "status": "pending",
+      "status": "done",
       "assignee": null,
       "claimed_at": null,
       "lease_until": null,
@@ -921,7 +937,21 @@
       "test_owner": null,
       "test_started_at": null,
       "test_finished_at": null,
-      "artifacts": []
+      "artifacts": [
+        "compile: npm run compile -> pass",
+        "targeted tests: npx mocha \"dist/test/suite/gitAwareness.test.js\" --ui tdd -> pass (4 passing)",
+        "test_step: commit draft helper tested via targeted gitAwareness suite.",
+        "test_step: changed files and recent log drive draft message intent (gitAwareness.test: creates draft message from status diff and recent log).",
+        "test_step: flow does not call git commit or git push without explicit user action; read-only guard blocks push, commit, and destructive git actions.",
+        "summary: draft commit message flow composes output from git status, git diff, and recent git log while remaining read-only by policy.",
+        "changed_files: src/gitAwareness.ts, src/test/suite/gitAwareness.test.ts",
+        "handoff: awaiting test-coordinator full-suite verdict",
+        "worker_note: no commit created by worker",
+        "tc_strategy: serial lane (single shared extension-host test environment)",
+        "tc_commands: npm run compile; npm test",
+        "tc_result: pass (compile ok; full npm test ok, 65 passing, extension host exit code 0)",
+        "reviewer_note: approved; acceptance criteria validated with worker artifacts, code inspection, lints, and test_verdict=pass."
+      ]
     },
     {
       "id": "TASK-024",

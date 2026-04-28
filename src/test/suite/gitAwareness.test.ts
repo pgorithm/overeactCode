@@ -96,9 +96,51 @@ suite("Git awareness tool adapter", () => {
       /blocked in MVP read-only mode/
     );
     assert.throws(
+      () => tool.assertReadOnlyMvpCommand("commit -m \"test\""),
+      /blocked in MVP read-only mode/
+    );
+    assert.throws(
       () => tool.assertReadOnlyMvpCommand("reset --hard HEAD"),
       /blocked in MVP read-only mode/
     );
+  });
+
+  test("creates draft message from status diff and recent log", async () => {
+    const commands: string[] = [];
+    const tool = new GitAwarenessTool(async (args) => {
+      const key = args.join(" ");
+      commands.push(key);
+      if (key === "status --short") {
+        return success(" M src/extension.ts\n?? src/newFile.ts\n");
+      }
+      if (key === "diff --no-color") {
+        return success(
+          "diff --git a/src/extension.ts b/src/extension.ts\n@@ -1 +1 @@\n-old\n+new"
+        );
+      }
+      if (key === "log -5 --pretty=format:%h%x09%s") {
+        return success("abc123\tfeat: add session flow");
+      }
+      return {
+        stdout: "",
+        stderr: `Unexpected command: ${key}`,
+        exitCode: 1
+      };
+    });
+
+    const result = await tool.createDraftCommitMessage();
+
+    assert.deepStrictEqual(commands, [
+      "status --short",
+      "diff --no-color",
+      "log -5 --pretty=format:%h%x09%s"
+    ]);
+    assert.strictEqual(result.status.hasChanges, true);
+    assert.ok(result.diff.includes("diff --git"));
+    assert.strictEqual(result.recentLog[0]?.subject, "feat: add session flow");
+    assert.ok(result.draftMessage.includes("Affected files: src/extension.ts, src/newFile.ts."));
+    assert.ok(result.draftMessage.includes("Diff intent: touches 1 file(s), with 1 addition line(s) and 1 deletion line(s)."));
+    assert.ok(result.draftMessage.includes("Recent style hint: feat: add session flow."));
   });
 });
 
