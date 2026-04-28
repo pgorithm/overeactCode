@@ -60,6 +60,26 @@ suite("PatchProposal model", () => {
     assert.strictEqual(rejected.status, "rejected");
   });
 
+  test("accepts only proposed structured patch for edit request", () => {
+    const store = new PatchProposalStore();
+    const proposal = store.createProposal({
+      id: "patch-3",
+      sessionId: "session-3",
+      fileUri: "file:///workspace/src/boundary.ts",
+      diff: "@@ -1,1 +1,1 @@\n-before\n+after"
+    });
+    const boundary = new PatchEditingBoundary();
+
+    const request = boundary.createEditRequest({ proposal });
+    assert.strictEqual(request.proposal.id, proposal.id);
+
+    const applied = store.updateStatus(proposal.id, "applied");
+    assert.throws(
+      () => boundary.createEditRequest({ proposal: applied }),
+      /must be in proposed status/
+    );
+  });
+
   test("rejects edit attempt without patch proposal", () => {
     const boundary = new PatchEditingBoundary();
 

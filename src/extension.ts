@@ -1,6 +1,8 @@
 import * as vscode from "vscode";
 import { AgentSessionStore } from "./agentSession";
 import { DiagnosticsTool, type WorkspaceDiagnostic } from "./diagnostics";
+import { PatchEditingBoundary } from "./patchEditingBoundary";
+import { PatchProposalStore } from "./patchProposal";
 import { evaluatePermissionPolicy } from "./permissionPolicy";
 import {
   buildPolicyDeniedResult,
@@ -19,6 +21,8 @@ const COMPOSER_VIEW_ID = "overeactCode.composerView";
 
 class OvereactComposerViewProvider implements vscode.WebviewViewProvider {
   private readonly permissionPromptsBySession = new Map<string, PermissionPromptState>();
+  private readonly patchProposalStore = new PatchProposalStore();
+  private readonly patchEditingBoundary = new PatchEditingBoundary();
 
   public constructor(
     private readonly sessionStore: AgentSessionStore,
@@ -95,6 +99,14 @@ class OvereactComposerViewProvider implements vscode.WebviewViewProvider {
       sessionId,
       toolName: "workspace.write_file",
       inputSummary: "Apply patch proposal to src/extension.ts."
+    });
+    const patchProposal = this.patchProposalStore.createProposal({
+      sessionId,
+      fileUri: "file:///workspace/src/extension.ts",
+      diff: "@@ mock section\n-const pending = true;\n+const pending = false;"
+    });
+    this.patchEditingBoundary.createEditRequest({
+      proposal: patchProposal
     });
     const confirmPrompt = createPermissionPromptState({
       sessionId,

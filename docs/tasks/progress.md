@@ -24,3 +24,6 @@
 - Worker handoff: TASK-009 и TASK-013 успешно сдали реализацию и узкие тесты; TASK-011/TASK-012/TASK-014 вернули `blocked` из-за временной compile-ошибки в `src/diagnostics.ts` в момент параллельного прогона.
 - Test Coordinator (batch TASK-009/TASK-013): выполнен serial full-suite (`npm run compile`; `npm test`) — `43 passing`, `test_verdict=pass` для обеих задач.
 - Reviewer (batch TASK-009/TASK-013): задачи одобрены и переведены в `done` после проверки acceptance criteria, worker artifacts и coordinator evidence; lease metadata очищены.
+- TASK-011 rerun: повторный worker-проход и full-suite Test Coordinator (`npm run compile`; `npm test` — 43 passing) прошли успешно; задача одобрена reviewer и переведена из `blocked` в `done`.
+- Dispatcher rerun (from scratch): TASK-012 и TASK-014 перезапущены по запросу пользователя с новым claim и отдельными worker-сессиями; получены корректные handoff без изменений queue/progress и без worker-коммитов.
+- Test Coordinator + Reviewer (batch TASK-012/TASK-014): serial full-suite (`npm run compile`; `npm test` — 44 passing) пройден, обе задачи одобрены reviewer и переведены в `done`, lease metadata очищены.
