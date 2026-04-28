@@ -1,4 +1,5 @@
 import { randomUUID } from "crypto";
+import { sanitizeToolCallRecord } from "./privacyGuards";
 
 export const TOOL_CALL_STATUSES = [
   "pending",
@@ -54,8 +55,9 @@ export class ToolCallRecordStore {
       finishedAt: null
     };
 
-    this.records.set(record.id, record);
-    return record;
+    const sanitized = sanitizeToolCallRecord(record);
+    this.records.set(record.id, sanitized);
+    return sanitized;
   }
 
   public setPermissionDecision(
@@ -119,9 +121,9 @@ export class ToolCallRecordStore {
       outputSummary,
       finishedAt: nowFactory()
     };
-
-    this.records.set(recordId, updated);
-    return updated;
+    const sanitized = sanitizeToolCallRecord(updated);
+    this.records.set(recordId, sanitized);
+    return sanitized;
   }
 
   public getBySessionId(sessionId: string): ToolCallRecord[] {

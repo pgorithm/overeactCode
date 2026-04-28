@@ -43,3 +43,5 @@
 - Worker handoff (batch TASK-018/TASK-023): обе задачи успешно сдали реализацию и узкие проверки; queue/progress воркерами не изменялись, коммиты воркерами не создавались.
 - Test Coordinator (batch TASK-018/TASK-023): выполнен serial full-suite (`npm run compile`; `npm test`) — `65 passing`, `test_verdict=pass` для обеих задач.
 - Reviewer (batch TASK-018/TASK-023): задачи одобрены и переведены в `done` после проверки acceptance criteria, кода, lints и coordinator evidence; lease metadata очищены.
+- TASK-022 (solo): добавлен privacy hardening для `tool logs` и `final summary` через автоматическое редактирование секретов (`sk-*`, `Bearer`, `api_key=*`) и retrieval-first guard для targeted context перед provider call.
+- TASK-022 (solo): quality gate пройден (`npm run compile`, `npm test` — 70 passing), test_steps закрыты автотестами privacy/policy сценариев.

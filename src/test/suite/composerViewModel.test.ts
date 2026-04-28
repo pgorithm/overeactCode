@@ -122,4 +122,44 @@ suite("Composer view model", () => {
     assert.strictEqual(viewModel.finalSummary.checksRun[1], "npm test");
     assert.match(viewModel.finalSummary.suggestedNextSteps[0], /Extension Development Host/i);
   });
+
+  test("redacts secrets from tool activity and final summary", () => {
+    const loop = new AgentLoopController();
+    const session: AgentSession = {
+      id: "session-4",
+      workspaceUri: "workspace://test",
+      userRequest: "Check privacy safety",
+      status: "planning",
+      createdAt: "2026-04-28T00:00:00.000Z",
+      updatedAt: "2026-04-28T00:00:00.000Z"
+    };
+    const loopState = loop.begin(session.id);
+    const store = new ToolCallRecordStore();
+    store.createPendingRecord({
+      sessionId: session.id,
+      toolName: "provider.connectivity",
+      inputSummary: "api_key=sk-secret-value"
+    });
+
+    const viewModel = buildComposerViewModel({
+      session,
+      loopState,
+      toolActivity: store.getBySessionId(session.id),
+      finalSummary: {
+        changedFiles: [],
+        checksRun: ["curl -H 'Authorization: Bearer secret-token-123'"],
+        unresolvedIssues: ["provider error with key sk-secret-value"],
+        assumptions: [],
+        suggestedNextSteps: []
+      }
+    });
+
+    assert.ok(
+      !viewModel.toolActivityDefault[0].inputSummary.includes("sk-secret-value")
+    );
+    assert.ok(viewModel.toolActivityDefault[0].inputSummary.includes("[REDACTED]"));
+    assert.ok(!viewModel.finalSummary.checksRun[0].includes("secret-token-123"));
+    assert.ok(viewModel.finalSummary.checksRun[0].includes("[REDACTED]"));
+    assert.ok(!viewModel.finalSummary.unresolvedIssues[0].includes("sk-secret-value"));
+  });
 });

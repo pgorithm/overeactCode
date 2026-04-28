@@ -78,4 +78,26 @@ suite("ToolCallRecord model", () => {
     assert.strictEqual(denied.startedAt, null);
     assert.strictEqual(denied.finishedAt, "2026-04-28T18:40:00.000Z");
   });
+
+  test("redacts secrets in tool call summaries", () => {
+    const store = new ToolCallRecordStore();
+    const pending = store.createPendingRecord({
+      id: "call-3",
+      sessionId: "session-3",
+      toolName: "provider.connectivity",
+      inputSummary: "Check provider with api_key=sk-secret-abc123"
+    });
+    const approved = store.setPermissionDecision(pending.id, "approved");
+    const running = store.markRunning(approved.id);
+    const completed = store.markFinished(
+      running.id,
+      "failed",
+      "Authorization: Bearer tokensecret123 failed."
+    );
+
+    assert.ok(!pending.inputSummary.includes("sk-secret-abc123"));
+    assert.ok(pending.inputSummary.includes("[REDACTED]"));
+    assert.ok(!completed.outputSummary.includes("tokensecret123"));
+    assert.ok(completed.outputSummary.includes("[REDACTED]"));
+  });
 });

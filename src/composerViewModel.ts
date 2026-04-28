@@ -1,5 +1,6 @@
 import type { AgentLoopState, AgentSession } from "./agentSession";
 import type { ToolCallRecord } from "./toolCallRecord";
+import { sanitizeFinalSummary, sanitizeToolCallRecord } from "./privacyGuards";
 
 export interface ComposerFinalSummary {
   changedFiles: string[];
@@ -71,7 +72,9 @@ export function buildComposerViewModel(input: {
   const phaseUpdates = input.loopState.phaseHistory.map((phase) => {
     return PHASE_LABELS[phase] ?? phase;
   });
-  const toolActivityDefault = input.toolActivity.slice(0, 3);
+  const toolActivityDefault = input.toolActivity
+    .slice(0, 3)
+    .map((record) => sanitizeToolCallRecord(record));
   const hiddenToolActivityCount = Math.max(input.toolActivity.length - 3, 0);
   const failedCommands =
     input.loopState.lastVerificationFeedback?.failedCommands.map((entry) => {
@@ -111,6 +114,6 @@ export function buildComposerViewModel(input: {
     toolActivityDefault,
     hiddenToolActivityCount,
     verification,
-    finalSummary: input.finalSummary
+    finalSummary: sanitizeFinalSummary(input.finalSummary)
   };
 }
