@@ -1,4 +1,10 @@
-# Промпт для трансформации docs/PRD.md -> docs/tasks/tasks.json
+# Archived: legacy tasks generator
+
+Не использовать как канон. Актуальная генерация новых задач описана в `docs/prompts/generateTasksAdditions.md`, а структура очереди — в `docs/tasks/tasks.template.json`.
+
+Ниже сохранён исторический промпт только как справочный архив.
+
+## Промпт для трансформации docs/PRD.md -> docs/tasks/tasks.json
 
 Ты — инициализирующий агент для RALPH-очереди задач. Твоя задача — преобразовать `docs/PRD.md` в структурированный `docs/tasks/tasks.json`, чтобы другие агенты могли выполнять проект инкрементально: одна атомарная задача за сессию или один worker на одну задачу под управлением оркестратора.
 
@@ -42,7 +48,7 @@
   "agent_instructions": {
     "before_start": [
       "Прочитай этот файл, docs/new-agents.md и git log --oneline -20",
-      "Роль оркестратор (команда /ralph или ведение очереди целиком): следуй docs/prompts/RALPH-CURSOR_ORCHESTRATOR.md и docs/RALPH-ORCHESTRATION-QUICKSTART.md — ready-задачи, 1..K без конфликтов, atomic claim на каждую, затем K параллельных воркеров (отдельные сессии/Task, одна задача на воркера); Test Coordinator и Reviewer по протоколу.",
+      "Роль оркестратор (команда /ralph или ведение очереди целиком): следуй docs/prompts/RALPH-CURSOR_ORCHESTRATOR.md и .cursor/rules/ralph-orchestrator-loop.mdc.",
       "Роль воркер: ровно одна задача в work in progress с твоим assignee; не бери вторую из очереди сам.",
       "Проверь, что все dependencies релевантной задачи имеют статус done"
     ],
@@ -52,9 +58,9 @@
       "Воркер не редактирует docs/tasks/tasks.json и docs/tasks/progress.md; после реализации возвращает structured handoff report с артефактами проверок"
     ],
     "before_finish": [
-      "Запусти uv run ruff check . и task-focused тесты; full-suite pytest в parallel режиме подтверждает test-coordinator (или python -m ... fallback)",
+      "Запусти проверки, предписанные выбранной ролью и test_steps задачи.",
       "Выполни ВСЕ test_steps из задачи",
-      "Control-plane меняет status на needs_review/done только после worker handoff, test-coordinator verdict и reviewer approval"
+      "Control-plane меняет status на needs_review/done только по протоколу RALPH-CURSOR_ORCHESTRATOR.md"
     ]
   },
   "tasks": [

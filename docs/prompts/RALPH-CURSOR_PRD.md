@@ -4,8 +4,7 @@
 
 ## Инициализация
 
-1. Прочитай docs/new-agents.md (правила проекта)
-   - Обрати внимание на секции **Build & Test** и **Known Gotchas** — это источник правды по подводным камням и конвенциям.
+1. Прочитай docs/new-agents.md (правила проекта, gotchas и ownership agent-facing docs).
 2. Прочитай docs/tasks/prd_refactor_tasks.json или docs/tasks/done/prd_refactor_tasks.json (список задач и agent_instructions)
 3. Прочитай docs/PRD.md (целиком или разделы, указанные в выбранной задаче)
 4. Выполни в **корне репозитория** (workspace root) команду: `git log --oneline -20` — чтобы увидеть последние коммиты; шаг не пропускать, выполнять через терминал.

@@ -19,7 +19,9 @@ It prevents flaky "green by chance" outcomes when multiple workers change code c
 
 ## When To Run
 
-Run for tasks in `needs_review` that have implementation artifacts and are awaiting full quality gate.
+Run only after all workers in the current dispatcher batch have returned handoff/blocker reports and the dispatcher has updated queue state.
+
+Process only the explicit current batch passed by the dispatcher. Do not auto-pick unrelated `needs_review` tasks from the queue.
 
 ## Test Scheduling Policy
 

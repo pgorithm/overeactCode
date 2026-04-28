@@ -58,7 +58,7 @@ Add reviewer note to `artifacts` with concrete gaps.
 - Reviewer does not approve tasks with failed/missing quality gate.
 - Reviewer does not delete tasks or alter unrelated queue entries.
 - Commit ownership is control-plane only: worker/test-coordinator never commit.
-- Reviewer may create the final task commit (one commit per task) or delegate commit to orchestrator by explicit queue policy.
+- Final commit requirements are owned by `.cursor/rules/ralph-orchestrator-loop.mdc` and the orchestrator prompt.
 
 ## Feedback Format
 

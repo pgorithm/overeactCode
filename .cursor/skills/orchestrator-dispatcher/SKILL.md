@@ -66,8 +66,7 @@ If claim fails due to concurrent update, re-read queue and choose another task.
 - Dispatcher must not alter task scope, acceptance criteria, or delete tasks.
 - Dispatcher must schedule test-coordinator pass before reviewer `done` decision in parallel mode.
 - Dispatcher enforces strict commit ownership: workers and test coordinator do not commit.
-- Dispatcher must ensure each task closed as `done` has an actual final task commit (one commit per task), created by reviewer or dispatcher/orchestrator per queue policy.
-- Dispatcher must finish each orchestration cycle with a clean `git status`; unresolved unstaged/staged leftovers are not allowed between cycles.
+- Dispatcher must follow `.cursor/rules/ralph-orchestrator-loop.mdc` for non-stop cycle closure, final commit, and clean `git status`.
 
 ## Status Pipeline
 

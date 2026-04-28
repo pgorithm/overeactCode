@@ -45,7 +45,7 @@
   "agent_instructions": {
     "before_start": [
       "Прочитай docs/PRD.md (целиком или разделы, указанные в задаче)",
-      "Роль оркестратор: при нескольких независимых PRD-задачах — atomic claim на каждую и параллельные воркеры по docs/prompts/RALPH-CURSOR_ORCHESTRATOR.md.",
+      "Роль оркестратор: при нескольких независимых PRD-задачах следуй docs/prompts/RALPH-CURSOR_ORCHESTRATOR.md и .cursor/rules/ralph-orchestrator-loop.mdc.",
       "Роль воркер: одна задача pending (соло) или одна выданная в work in progress; наивысший приоритет.",
       "Проверь, что все dependencies этой задачи выполнены (status done)"
     ],

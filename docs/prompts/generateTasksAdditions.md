@@ -25,58 +25,12 @@
 
 ### 1. Формат задач — строго JSON
 
-Используй JSON, а не Markdown. Модель реже случайно изменяет или удаляет JSON-структуры.
-`docs/tasks/tasks.json` должен соответствовать структуре `docs/tasks/tasks.template.json`.
-Формат без полей оркестрации не использовать.
+Используй JSON, а не Markdown. `docs/tasks/tasks.json` должен соответствовать `docs/tasks/tasks.template.json`; не копируй схему в этот промпт и не создавай формат без orchestration-полей.
 
-```json
-{
-  "tasks": [
-    {
-      "id": "TASK-001",
-      "category": "functional|ui|integration|infrastructure|security",
-      "priority": "critical|high|medium|low",
-      "description": "Краткое описание функциональности на русском",
-      "acceptance_criteria": [
-        "Конкретный критерий приёмки 1",
-        "Конкретный критерий приёмки 2"
-      ],
-      "test_steps": [
-        "Шаг 1: что сделать",
-        "Шаг 2: что проверить",
-        "Шаг 3: ожидаемый результат"
-      ],
-      "dependencies": ["TASK-000"],
-      "status": "pending",
-      "assignee": null,
-      "claimed_at": null,
-      "lease_until": null,
-      "review_required": true,
-      "status_reason": null,
-      "test_verdict": null,
-      "test_owner": null,
-      "test_started_at": null,
-      "test_finished_at": null,
-      "artifacts": []
-    }
-  ]
-}
-```
+Канон:
 
-Обязательные поля координации для каждой задачи:
-
-- `assignee`
-- `claimed_at`
-- `lease_until`
-- `review_required`
-- `status_reason`
-- `test_verdict`
-- `test_owner`
-- `test_started_at`
-- `test_finished_at`
-- `artifacts`
-
-Готовый шаблон: `docs/tasks/tasks.template.json` (используй его как канон структуры).
+- структура корня, `agent_instructions` и обязательные поля задачи — `docs/tasks/tasks.template.json`;
+- детальный RALPH-протокол — `docs/prompts/RALPH-CURSOR.md`, `docs/prompts/RALPH-CURSOR_ORCHESTRATOR.md` и `.cursor/skills/orchestrator-*`.
 
 ### 2. Принципы декомпозиции
 
@@ -100,38 +54,9 @@
 
 Не все категории обязательны в одном наборе — текущий PRD/очередь могут содержать только часть из них.
 
-### 4. Правила для coding-агентов (включи в начало файла)
+### 4. Правила для coding-агентов
 
-```json
-{
-  "agent_instructions": {
-    "before_start": [
-      "Прочитай этот файл, docs/new-agents.md и git log --oneline -20",
-      "Роль оркестратор (/ralph): см. docs/prompts/RALPH-CURSOR_ORCHESTRATOR.md — ready-задачи, 1..K, atomic claim на каждую, K параллельных воркеров (отдельные сессии/Task).",
-      "Роль воркер: одна задача, выданная claim (work in progress, твой assignee).",
-      "Проверь, что все dependencies релевантной задачи имеют статус done"
-    ],
-    "during_work": [
-      "Работай только над выбранной задачей",
-      "Делай коммит только когда это явно требуется текущим RALPH-запуском/пользователем; один коммит не должен смешивать несколько задач",
-      "Не трогай код, не связанный с текущей задачей"
-    ],
-    "before_finish": [
-      "Выполни ВСЕ test_steps из задачи",
-      "Если package.json уже есть: npm run compile и npm test; если задача создаёт scaffold — выполни добавленные package scripts",
-      "Меняй status на done ТОЛЬКО после успешного прохождения применимого quality gate",
-      "Напиши summary в docs/tasks/progress.md",
-      "ЗАПРЕЩЕНО удалять или редактировать задачи — только менять status"
-    ]
-  }
-}
-```
-
-Добавь в инструкции явный протокол статусов:
-
-- `pending -> work in progress -> needs_review -> done`
-- перед стартом задачи обязательно выставлять `assignee`, `claimed_at`, `lease_until`
-- перевод в `done` разрешён только после reviewer-подтверждения
+В начало файла включи `agent_instructions` из `docs/tasks/tasks.template.json` без расширенного пересказа RALPH-протокола. Если нужно уточнить запуск, добавляй только ссылки на `docs/prompts/RALPH-CURSOR.md`, `docs/prompts/RALPH-CURSOR_ORCHESTRATOR.md` и `.cursor/skills/orchestrator-*`.
 
 ### 5. Количество задач
 

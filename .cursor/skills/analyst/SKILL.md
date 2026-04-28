@@ -21,7 +21,7 @@ For architecture-wide decisions, use `project-wide-orchestrator`.
 Before analysis:
 
 1. Read `docs/new-agents.md` fully.
-2. Use the sections **Build & Test**, **Security / Secrets**, and **Legislative / Legal Gotchas** when relevant.
+2. Treat `docs/new-agents.md` as the project gotchas/conventions source of truth; link to deeper docs instead of duplicating them.
 
 ## Workflow
 

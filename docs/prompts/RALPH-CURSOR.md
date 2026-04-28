@@ -1,107 +1,24 @@
-# Промпт для исполнения
+# RALPH Cursor Entry Point
 
-Работаем по Ральф-методологии. Ты выполняешь задачи из `docs/tasks/tasks.json`.
+Работаем по Ральф-методологии с очередью `docs/tasks/tasks.json`.
 
-## Два режима (выбери по контексту запуска)
+Этот файл — только маршрутизатор. Не дублируй здесь solo/worker/orchestrator протоколы.
 
-1. **Соло** — один агент, без параллельной очереди: полный цикл до `done` на себе (включая полный доступный npm quality gate), если иное не задано в задаче или очереди.
-2. **Оркестратор** — параллельные агенты или явная инструкция «оркестратор»: следуй `docs/prompts/RALPH-CURSOR_ORCHESTRATOR.md`, роли — skills `orchestrator-dispatcher`, `orchestrator-worker`, `orchestrator-reviewer`, `orchestrator-test-coordinator` в `.cursor/skills/`.
+## Обязательная инициализация
 
-В оркестраторном режиме **канонический поток статусов**: `pending → work in progress → needs_review → done` (плюс при необходимости `blocked` / `failed`). Worker **не** переводит задачу в `done` сам и **не редактирует** `docs/tasks/tasks.json` / `docs/tasks/progress.md`: после реализации и **узких** проверок он возвращает structured handoff report оркестратору. Перевод в `needs_review`, запись артефактов и progress выполняет control-plane (dispatcher/orchestrator, Test Coordinator, Reviewer). **Полный** `npm test`, security/privacy-регрессы (`tests/security`, redaction/policy tests и т.п. по правилам очереди) и вердикт `test_verdict` — зона **Test Coordinator** (роль тестировщика координатора), не воркера. Финальное `done` — после **Reviewer** и `test_verdict = pass` (см. оркестраторный промпт).
+1. Прочитай `docs/new-agents.md`.
+2. Прочитай `docs/tasks/tasks.json`.
+3. Выполни в корне репозитория `git log --oneline -20`.
+4. Выбери режим по контексту запуска.
 
-Если ты **worker** под оркестратором, детали переходов и границ — в `.cursor/skills/orchestrator-worker/SKILL.md` (только тесты, связанные с доработкой; запрет на `done` при `review_required: true`).
+## Режимы
 
----
+- **Solo:** если пользователь просит одного агента выполнить следующую задачу, следуй `docs/prompts/RALPH-CURSOR_SOLO.md`.
+- **Orchestrator:** если пользователь запускает `docs/prompts/RALPH-CURSOR_ORCHESTRATOR.md`, просит вести очередь целиком, параллелить задачи или работать с `docs/tasks/tasks.json` как control-plane, следуй `docs/prompts/RALPH-CURSOR_ORCHESTRATOR.md` и always-on guardrail `.cursor/rules/ralph-orchestrator-loop.mdc`.
+- **Worker under orchestrator:** если задача уже выдана через claim (`status = "work in progress"` и твой `assignee`), следуй `.cursor/skills/orchestrator-worker/SKILL.md` и инструкциям диспетчера.
 
-## Инициализация
+## Канонические источники
 
-1. Прочитай `docs/new-agents.md` (правила проекта).
-2. Прочитай `docs/tasks/tasks.json` (список задач). Канон структуры очереди — `docs/tasks/tasks.template.json`. Если очередь содержит поля `assignee`, `lease_until`, `artifacts`, `test_verdict` — трактуй координацию по `RALPH-CURSOR_ORCHESTRATOR.md`.
-3. В **корне репозитория** (workspace root) выполни: `git log --oneline -20` — шаг не пропускать, через терминал.
-4. Найди задачу для работы:
-   - **Соло:** одна задача — статус `pending` (если сам делаешь claim), все `dependencies` = `done`, наивысший приоритет (critical > high > medium > low).
-   - **Оркестратор:** не реализуй код всех K задач сам в одной сессии — выбери 1..K ready-задач по `RALPH-CURSOR_ORCHESTRATOR.md`, сделай atomic claim на каждую и **после каждого claim выполни sanity-check diff `docs/tasks/tasks.json` (изменены только целевые TASK-xxx)**, затем запусти **K параллельных воркеров** (отдельные субагенты/Task). При любом попадании в чужие task-блоки сначала исправь очередь, и только потом запускай воркеров. В этой сессии ты control-plane, пока не переключился в роль воркера для одной выданной тебе задачи.
-   - **Воркер под оркестратором:** ровно одна задача — уже в `work in progress` с твоим `assignee`, все её `dependencies` = `done`.
-
----
-
-## Соло: цикл работы над задачей
-
-1. **Объяви задачу**: «Беру TASK-XXX: <описание>».
-2. **Обнови `docs/tasks/tasks.json`**: `status` → `"work in progress"`, чтобы другой процесс не взял ту же задачу.
-3. **Реализуй** `acceptance_criteria`.
-4. **Проверь (обязательно до `done`)**:
-   - Если `package.json` уже есть: `npm install` при отсутствующем `node_modules`, затем `npm run compile` и `npm test`.
-   - Если задача создаёт scaffold и `package.json` ещё нет: сначала реализуй scaffold по задаче, затем выполни команды, которые сама задача добавила в `package scripts`.
-   - Если задача только документационная: выполни ручные `test_steps` и проверь ссылки/пути; не выдумывай npm-команды без `package.json`.
-   - Выполни `test_steps` из задачи (ручные шаги — опиши результат или «требует ручной проверки»).
-5. **Обнови `docs/tasks/tasks.json`**: `status` → `"done"` *только после* успешного доступного quality gate (`npm run compile`, `npm test` и `test_steps`, когда применимо). *(Исключение: отсутствующий scaffold до TASK-001 или явно отложенные security/privacy-тесты текущей очереди — пропуск только если это разрешено правилами текущей очереди, см. оркестраторный промпт.)*
-6. **Запиши прогресс** в `docs/tasks/progress.md` (1–2 строки).
-7. **Сделай git commit** с осмысленным сообщением.
-
----
-
-## Оркестратор: цикл worker (кратко)
-
-Исполняй только если задача уже закреплена за тобой (`work in progress`, корректный `assignee` / инструкция диспетчера).
-
-1. Реализуй `acceptance_criteria`.
-2. Локальный quality gate: `npm run compile` + **только** task-focused `npm test`/тестовый поднабор, связанный с твоей доработкой (затронутые модули/файлы, маркеры из задачи, безопасный поднабор). **Не** запускай от имени воркера полный прогон репозитория и **не** бери на себя полный security/privacy-регресс — это делает Test Coordinator. Локальные `test_steps`, если они не требуют полного suite — выполни и опиши.
-3. **Queue files:** воркер **не редактирует** `docs/tasks/tasks.json` и `docs/tasks/progress.md`. Эти файлы — single-writer зона control-plane.
-4. **Git:** воркер **не делает коммит**. Подготовь изолированный diff только по своей задаче и передай его дальше по циклу (см. `RALPH-CURSOR_ORCHESTRATOR.md`, политика коммитов).
-5. **Не** переводи в `done` при `review_required: true`: верни structured handoff report (команды узкого прогона, вывод, итог ручных шагов, явная пометка, что полный прогон и security ждут Test Coordinator, краткое резюме изменений, список changed files).
-6. Перевод в `needs_review`, запись `artifacts`, обновление `progress.md` и коммит задачи выполняет только Reviewer или Orchestrator после проверки; дальнейшие `test_verdict`, полный `npm test`, решение reviewer — по `RALPH-CURSOR_ORCHESTRATOR.md`.
-7. В оркестраторном цикле worker и Test Coordinator коммиты не делают; финальный task-коммит делает Reviewer или Orchestrator (по политике цикла), и оркестратор завершает цикл только с чистым `git status`.
-
-### Важно: грязное дерево в параллели
-
-- В режиме оркестратора наличие «чужих» изменений в `git status` ожидаемо: это могут быть результаты других воркеров или pre-existing изменения.
-- Не останавливайся только из-за факта таких изменений; продолжай выполнять свою claimed-задачу.
-- Изолируй свою работу: меняй **только** файлы своей задачи; чужие изменения не трогай и не откатывай.
-- Если чужие изменения конфликтуют с твоей задачей на уровне тех же файлов/дифф-ханков и мешают изолированной подготовке diff, эскалируй диспетчеру с конкретным списком конфликтов. Не меняй queue/progress для фиксации блокера.
-
-### Guardrails против путаницы (обязательно)
-
-- Перед началом проверь в `tasks.json`, что твоя задача сейчас `work in progress` и `assignee` совпадает с твоим worker-id. Если нет — остановись и верни управление оркестратору.
-- Если задача уже `needs_review` или `done`, **не** выполняй повторный worker-цикл и **не** делай новые коммиты. Повтор возможен только после явного rerun-reset оркестратором (`status = work in progress` + новый lease + `status_reason` с причиной rerun).
-- Воркер не коммитит: финальный task-коммит делает Reviewer или Orchestrator после валидации.
-- Подготовь изменения так, чтобы Reviewer/Orchestrator смог сделать **один финальный коммит** на задачу без смешивания чужих правок.
-
-### Граница редактирования очереди (`tasks.json` / `progress.md`)
-
-- Воркер не имеет права редактировать `docs/tasks/tasks.json`.
-- Воркер не имеет права редактировать `docs/tasks/progress.md`.
-- Статусы, `artifacts`, `test_verdict`, lease metadata и progress-записи обновляет только control-plane после получения handoff report.
-- Если воркер случайно изменил queue/progress, он должен сообщить об этом оркестратору и не пытаться "легализовать" эти правки коммитом.
-
----
-
-## После завершения задачи
-
-Напиши краткий итог. В соло — как раньше:
-
-```text
-TASK-XXX выполнена (N/M). Следующая pending-задача: TASK-YYY (<описание>).
-```
-
-N — число задач в статусе `done`, M — всего в `tasks.json`. В оркестраторе можно использовать формат отчёта из `RALPH-CURSOR_ORCHESTRATOR.md` («В работе / На ревью / …»), если ведёшь очередь целиком.
-
----
-
-## Правила
-
-- Одна активная задача за раз (для одного агента).
-- Не трогай код вне текущей задачи.
-- В соло-режиме не удаляй задачи из JSON — только разрешённые поля (`status`, координация в v2 и т.д.). В оркестраторном worker-режиме queue/progress не редактируй вообще.
-- Если не хватает dependency или требований — остановись, сообщи, зафиксируй в `docs/tasks/currentProblems.md`.
-- При падении тестов: чини регрессии, обновляй тесты по делу, не переключайся на следующую задачу, пока цикл не закрыт (в соло — до зелёного полного доступного `npm test`; под оркестратором — до зелёного **узкого** прогона по своей задаче и передачи координатору; провал полного/security — зона Test Coordinator / повтор цикла по `RALPH-CURSOR_ORCHESTRATOR.md`).
-
----
-
-## Когда все задачи `done` (соло-очередь)
-
-- Перенеси `docs/tasks/tasks.json` в `docs/tasks/done` (через команды shell).
-- Создай в `docs/releaseNotes` файл `.md`: дата `YYYY-MM-DD.md` или `YYYY-MM-DD-краткий-смысл.md`; при коллизии имени — числовой суффикс.
-- Релиз-нот: **каждая** задача из перенесённого батча, но только то, что заметно пользователю расширения VS Code (side composer, provider setup, permissions, verification, summaries), без внутренних имён и номеров задач в тексте для канала. Если нечего сказать пользователю — файл релиз-нота **не** создавай.
-
-Приступай к исполнению и не останавливайся, пока не закроешь текущий цикл по выбранному режиму (соло: задача до `done`; worker: до готового isolated diff + structured handoff report для оркестратора).
+- Структура очереди: `docs/tasks/tasks.template.json`.
+- Роли оркестратора: `.cursor/skills/orchestrator-dispatcher/`, `.cursor/skills/orchestrator-worker/`, `.cursor/skills/orchestrator-test-coordinator/`, `.cursor/skills/orchestrator-reviewer/`.
+- Non-stop завершение оркестраторного цикла: `.cursor/rules/ralph-orchestrator-loop.mdc`.

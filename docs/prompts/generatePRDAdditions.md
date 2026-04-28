@@ -9,7 +9,7 @@
 - Исходный документ требований: [docs/PRD.md](docs/PRD.md).
 - Список текущих проблем: [docs/tasks/currentProblems.md](docs/tasks/currentProblems.md).
 - Список ранее выполненных работ: [docs/tasks/progress.md](docs/tasks/progress.md).
-- Перед работой ознакомься с [docs/new-agents.md](docs/new-agents.md) (Build & Test, Known Gotchas).
+- Перед работой ознакомься с [docs/new-agents.md](docs/new-agents.md) (gotchas и проектные конвенции).
 
 Ты не создаёшь PRD с нуля, а **дополняешь** существующий PRD формулировками, которые можно вставить в нужные разделы 1–15: MVP Scope, User Flows, Functional Requirements, Data Model, UX, Platform, Integrations, Security/Privacy, Milestones, Risks, Assumptions или Open Questions.
 

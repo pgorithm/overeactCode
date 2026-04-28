@@ -47,7 +47,7 @@
       "Прочитай docs/new-agents.md (правила проекта)",
       "Сверь формулировки SEC с docs/PRD.md (FR-001, FR-004, FR-005, FR-007, FR-008, разделы 10 и 13)",
       "Прочитай этот файл и git log --oneline -10",
-      "Роль оркестратор (параллельная очередь): см. docs/prompts/RALPH-CURSOR_ORCHESTRATOR.md — 1..K ready-задач, atomic claim, K отдельных воркер-сессий (Task/субагенты).",
+      "Роль оркестратор (параллельная очередь): следуй docs/prompts/RALPH-CURSOR_ORCHESTRATOR.md и .cursor/rules/ralph-orchestrator-loop.mdc.",
       "Роль воркер: одна задача со статусом pending (соло-claim) или уже выданная в work in progress; наивысший приоритет среди доступных.",
       "Проверь, что все dependencies имеют статус done"
     ],
